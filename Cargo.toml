@@ -5,7 +5,7 @@ authors = ["Martin Matusiak <numerodix@gmail.com>"]
 edition = "2018"
 
 [dependencies]
-bootloader = "0.9.8"
+bootloader = { version = "0.9.8", features = ["map_physical_memory"] }
 spin = "0.5.2"
 volatile = "0.2.6"
 uart_16550 = "0.2.15"
