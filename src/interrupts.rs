@@ -3,7 +3,9 @@ use crate::gdt;
 use crate::hlt_loop;
 use crate::print;
 use crate::println;
+use crate::serial_print;
 use lazy_static::lazy_static;
+use pc_keyboard::DecodedKey;
 use pic8259::ChainedPics;
 use spin;
 use x86_64::structures::idt::PageFaultErrorCode;
@@ -89,6 +91,19 @@ extern "x86-interrupt" fn keyboard_interrupt_handler(_stack_frame: InterruptStac
 
     let scancode: u8 = unsafe { port.read() };
     // crate::task::keyboard::add_scancode(scancode);
+
+    let mut keyboard = Keyboard::new(layouts::Us104Key, ScancodeSet1, HandleControl::Ignore);
+    if let Ok(Some(key_event)) = keyboard.add_byte(scancode) {
+        if let Some(key) = keyboard.process_keyevent(key_event) {
+            match key {
+                DecodedKey::Unicode(character) => {
+                    // serial_print!("char: {}", character);
+                    PADDLE_GAME.lock().keypress(character);
+                }
+                DecodedKey::RawKey(key) => serial_print!("key: {:?}", key),
+            }
+        }
+    }
 
     unsafe {
         PICS.lock()

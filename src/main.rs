@@ -9,7 +9,7 @@ extern crate alloc;
 use blog_os::allocator::init_allocation_system;
 use blog_os::games::paddle;
 use blog_os::println;
-use blog_os::task::keyboard;
+use blog_os::task::keyboard::{self, ScancodeStream};
 use blog_os::task::{executor::Executor, Task};
 use bootloader::{entry_point, BootInfo};
 use core::panic::PanicInfo;

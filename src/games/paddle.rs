@@ -154,12 +154,18 @@ impl Paddle {
         }
     }
 
-    fn advance(&mut self) {
+    fn advance(&mut self, screen: &Screen) {
         if self.displace_units > 0 {
             self.displace_units -= 1;
-            if self.dir == PaddleMoveDirection::Up {
+
+            // move up without hitting the edge
+            if self.dir == PaddleMoveDirection::Up && self.pos_y > 1 {
                 self.pos_y -= 1;
-            } else if self.dir == PaddleMoveDirection::Down {
+
+            // move down without hitting the edge
+            } else if self.dir == PaddleMoveDirection::Down
+                && self.pos_y + self.length < (screen.height as i8 - 1)
+            {
                 self.pos_y += 1;
             }
         }
@@ -259,7 +265,7 @@ impl PaddleGame {
             color: ball_color,
         };
 
-        let length = 1;
+        let length = 8;
         let mid_y = screen.height as i8 / 2;
         let pos_y = mid_y - (length / 2);
 
@@ -307,12 +313,12 @@ impl PaddleGame {
     fn draw_screen_border(&self) {
         let mut buffer = BUFFER.lock();
 
-        for y in 0..self.screen.height {
-            // left edge
-            buffer.chars[y][0] = char(b'|', self.text_color);
-            // right edge
-            buffer.chars[y][self.screen.width - 1] = char(b'|', self.text_color);
-        }
+        // for y in 0..self.screen.height {
+        //     // left edge
+        //     buffer.chars[y][0] = char(b'|', self.text_color);
+        //     // right edge
+        //     buffer.chars[y][self.screen.width - 1] = char(b'|', self.text_color);
+        // }
 
         for x in 0..self.screen.width {
             // top edge
@@ -349,6 +355,16 @@ impl PaddleGame {
         writer.write_double_buffer(&buffer);
     }
 
+    pub fn keypress(&mut self, ch: char) {
+        if ch == '8' {
+            self.right_paddle.dir = PaddleMoveDirection::Up;
+            self.right_paddle.displace_units = 1;
+        } else if ch == '2' {
+            self.right_paddle.dir = PaddleMoveDirection::Down;
+            self.right_paddle.displace_units = 1;
+        }
+    }
+
     pub fn redraw(&mut self) {
         self.ticks += 1;
 
@@ -356,10 +372,10 @@ impl PaddleGame {
             .advance(&self.screen, &self.left_paddle, &self.right_paddle);
 
         self.left_paddle.program_move(&self.screen, &self.ball);
-        self.left_paddle.advance();
+        self.left_paddle.advance(&self.screen);
 
-        self.right_paddle.program_move(&self.screen, &self.ball);
-        self.right_paddle.advance();
+        // self.right_paddle.program_move(&self.screen, &self.ball);
+        self.right_paddle.advance(&self.screen);
 
         self.clear_screen();
 
