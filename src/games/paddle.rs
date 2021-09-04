@@ -71,19 +71,19 @@ struct Paddle {
 }
 
 impl Paddle {
-    fn intersects(&self, ball: &Ball) -> bool {
+    fn intersects(&self, pos: &BallPosition) -> bool {
         // not on or behind left paddle
-        if self.side == PaddleSide::Left && self.pos_x < ball.pos_x {
+        if self.side == PaddleSide::Left && self.pos_x < pos.x {
             return false;
         }
 
         // not on or behind right paddle
-        if self.side == PaddleSide::Right && ball.pos_x < self.pos_x {
+        if self.side == PaddleSide::Right && pos.x < self.pos_x {
             return false;
         }
 
         // overlaps the paddle in the y coordinate
-        if ball.pos_y >= self.pos_y && ball.pos_y <= self.pos_y + self.length {
+        if pos.y >= self.pos_y && pos.y <= self.pos_y + self.length {
             return true;
         }
 
@@ -180,54 +180,95 @@ struct Velocity {
     // speed
 }
 
+struct BallPosition {
+    x: i8,
+    y: i8,
+    velocity: Velocity,
+}
+
+impl BallPosition {
+    pub fn advance(&mut self, screen: &Screen) {
+        self.x += self.velocity.x;
+        self.y += self.velocity.y;
+
+        // bounce off left wall
+        if self.x < 1 {
+            serial_println!("hit left wall at pos_y: {}", self.y);
+            self.velocity.x *= -1;
+            self.x += 2;
+        }
+
+        // bounce off right wall
+        if self.x > screen.width as i8 - 2 {
+            serial_println!("hit right wall at pos_y: {}", self.y);
+            self.velocity.x *= -1;
+            self.x -= 2;
+        }
+
+        // bounce off top wall
+        if self.y < 1 {
+            self.velocity.y *= -1;
+            self.y += 2;
+        }
+
+        // bounce off bottom wall
+        if self.y > screen.height as i8 - 2 {
+            self.velocity.y *= -1;
+            self.y -= 2;
+        }
+    }
+}
+
 struct Ball {
     pos_x: i8,
     pos_y: i8,
     velocity: Velocity,
+    pos: BallPosition,
     color: ColorCode,
 }
 
 impl Ball {
     pub fn advance(&mut self, screen: &Screen, left_paddle: &Paddle, right_paddle: &Paddle) {
-        self.pos_x += self.velocity.x;
-        self.pos_y += self.velocity.y;
+        self.pos.advance(screen);
+        // self.pos_x += self.velocity.x;
+        // self.pos_y += self.velocity.y;
 
-        // bounce off left wall
-        if self.pos_x < 1 {
-            serial_println!("hit left wall at pos_y: {}", self.pos_y);
-            self.velocity.x *= -1;
-            self.pos_x += 2;
-        }
+        // // bounce off left wall
+        // if self.pos_x < 1 {
+        //     serial_println!("hit left wall at pos_y: {}", self.pos_y);
+        //     self.velocity.x *= -1;
+        //     self.pos_x += 2;
+        // }
 
-        // bounce off right wall
-        if self.pos_x > screen.width as i8 - 2 {
-            serial_println!("hit right wall at pos_y: {}", self.pos_y);
-            self.velocity.x *= -1;
-            self.pos_x -= 2;
-        }
+        // // bounce off right wall
+        // if self.pos_x > screen.width as i8 - 2 {
+        //     serial_println!("hit right wall at pos_y: {}", self.pos_y);
+        //     self.velocity.x *= -1;
+        //     self.pos_x -= 2;
+        // }
 
-        // bounce off top wall
-        if self.pos_y < 1 {
-            self.velocity.y *= -1;
-            self.pos_y += 2;
-        }
+        // // bounce off top wall
+        // if self.pos_y < 1 {
+        //     self.velocity.y *= -1;
+        //     self.pos_y += 2;
+        // }
 
-        // bounce off bottom wall
-        if self.pos_y > screen.height as i8 - 2 {
-            self.velocity.y *= -1;
-            self.pos_y -= 2;
-        }
+        // // bounce off bottom wall
+        // if self.pos_y > screen.height as i8 - 2 {
+        //     self.velocity.y *= -1;
+        //     self.pos_y -= 2;
+        // }
 
         // bounce off left paddle
-        if left_paddle.intersects(self) {
+        if left_paddle.intersects(&self.pos) {
             self.velocity.x *= -1;
-            self.pos_x += 2;
+            self.pos.x += 2;
         }
 
         // bounce off right paddle
-        if right_paddle.intersects(self) {
+        if right_paddle.intersects(&self.pos) {
             self.velocity.x *= -1;
-            self.pos_x -= 2;
+            self.pos.x -= 2;
         }
     }
 }
@@ -250,6 +291,11 @@ impl PaddleGame {
             pos_x: 40,
             pos_y: 12,
             velocity: Velocity { x: 2, y: -1 },
+            pos: BallPosition {
+                x: 40,
+                y: 12,
+                velocity: Velocity { x: 2, y: -1 },
+            },
             color: ball_color,
         };
 
@@ -319,8 +365,8 @@ impl PaddleGame {
     fn draw_ball(&mut self) {
         let mut buffer = BUFFER.lock();
 
-        let x = self.ball.pos_x as usize;
-        let y = self.ball.pos_y as usize;
+        let x = self.ball.pos.x as usize;
+        let y = self.ball.pos.y as usize;
         buffer.chars[y][x] = char(b'o', self.ball.color);
     }
 
