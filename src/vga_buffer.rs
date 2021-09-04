@@ -57,9 +57,9 @@ impl ColorCode {
 /// A screen character in the VGA text buffer, consisting of an ASCII character and a `ColorCode`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(C)]
-struct ScreenChar {
-    ascii_character: u8,
-    color_code: ColorCode,
+pub struct ScreenChar {
+    pub ascii_character: u8,
+    pub color_code: ColorCode,
 }
 
 /// A structure representing the VGA text buffer.
@@ -84,6 +84,10 @@ impl Writer {
             ascii_character: byte,
             color_code: color,
         });
+    }
+
+    pub fn write_char_at(&mut self, char: ScreenChar, x: usize, y: usize) {
+        self.buffer.chars[y][x].write(char);
     }
 
     /// Writes an ASCII byte to the buffer.

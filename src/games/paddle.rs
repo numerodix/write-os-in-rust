@@ -1,4 +1,4 @@
-use crate::vga_buffer::{Color, ColorCode, BUFFER_HEIGHT, BUFFER_WIDTH, WRITER};
+use crate::vga_buffer::{Color, ColorCode, ScreenChar, BUFFER_HEIGHT, BUFFER_WIDTH, WRITER};
 use lazy_static::lazy_static;
 use spin::Mutex;
 
@@ -12,15 +12,27 @@ lazy_static! {
 
 lazy_static! {
     static ref BUFFER: Mutex<Buffer> = {
+        let color = ColorCode::new(Color::White, Color::Black);
+        let char = ScreenChar {
+            ascii_character: 0,
+            color_code: color,
+        };
         let buffer = Buffer {
-            chars: [[0; BUFFER_WIDTH]; BUFFER_HEIGHT],
+            chars: [[char; BUFFER_WIDTH]; BUFFER_HEIGHT],
         };
         Mutex::new(buffer)
     };
 }
 
 struct Buffer {
-    pub chars: [[u8; BUFFER_WIDTH]; BUFFER_HEIGHT],
+    pub chars: [[ScreenChar; BUFFER_WIDTH]; BUFFER_HEIGHT],
+}
+
+fn char(char: u8, color: ColorCode) -> ScreenChar {
+    ScreenChar {
+        ascii_character: char,
+        color_code: color,
+    }
 }
 
 pub struct Screen {
@@ -92,7 +104,7 @@ impl PaddleGame {
 
         for y in 0..self.screen.height {
             for x in 0..self.screen.width {
-                buffer.chars[y][x] = b' ';
+                buffer.chars[y][x] = char(b' ', self.text_color);
             }
         }
     }
@@ -102,23 +114,23 @@ impl PaddleGame {
 
         for y in 0..self.screen.height {
             // left edge
-            buffer.chars[y][0] = b'|';
+            buffer.chars[y][0] = char(b'|', self.text_color);
             // right edge
-            buffer.chars[y][self.screen.width - 1] = b'|';
+            buffer.chars[y][self.screen.width - 1] = char(b'|', self.text_color);
         }
 
         for x in 0..self.screen.width {
             // top edge
-            buffer.chars[0][x] = b'-';
+            buffer.chars[0][x] = char(b'-', self.text_color);
             // bottom edge
-            buffer.chars[self.screen.height - 1][x] = b'-';
+            buffer.chars[self.screen.height - 1][x] = char(b'-', self.text_color);
         }
     }
 
     pub fn draw_ball(&mut self) {
         let mut buffer = BUFFER.lock();
 
-        buffer.chars[self.ball.pos_y][self.ball.pos_x] = b'o';
+        buffer.chars[self.ball.pos_y][self.ball.pos_x] = char(b'o', self.ball.color);
     }
 
     pub fn paint_buffer(&self) {
@@ -128,7 +140,7 @@ impl PaddleGame {
         for y in 0..self.screen.height {
             for x in 0..self.screen.width {
                 let ch = buffer.chars[y][x];
-                writer.write_byte_at(ch, x, y, self.text_color);
+                writer.write_char_at(ch, x, y);
             }
         }
     }
