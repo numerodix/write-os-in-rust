@@ -1,3 +1,5 @@
+use bootloader::BootInfo;
+use crate::memory::{self, BootInfoFrameAllocator};
 use fixed_size_block::FixedSizeBlockAllocator;
 use x86_64::{
     structures::paging::{
@@ -42,6 +44,14 @@ pub fn init_heap(
     }
 
     Ok(())
+}
+
+pub fn init_allocation_system(boot_info: &'static BootInfo) {
+    let phys_mem_offset = VirtAddr::new(boot_info.physical_memory_offset);
+    let mut mapper = unsafe { memory::init(phys_mem_offset) };
+    let mut frame_allocator = unsafe { BootInfoFrameAllocator::init(&boot_info.memory_map) };
+
+    init_heap(&mut mapper, &mut frame_allocator).expect("heap initialization failed");
 }
 
 pub struct Locked<A> {
