@@ -1,4 +1,4 @@
-use crate::vga_buffer::{Color, ColorCode, ScreenChar, BUFFER_HEIGHT, BUFFER_WIDTH, WRITER};
+use crate::vga_buffer::{Color, ColorCode, DoubleBuffer, ScreenChar, BUFFER_HEIGHT, BUFFER_WIDTH, WRITER};
 use lazy_static::lazy_static;
 use spin::Mutex;
 
@@ -11,21 +11,17 @@ lazy_static! {
 }
 
 lazy_static! {
-    static ref BUFFER: Mutex<Buffer> = {
+    static ref BUFFER: Mutex<DoubleBuffer> = {
         let color = ColorCode::new(Color::White, Color::Black);
         let char = ScreenChar {
             ascii_character: 0,
             color_code: color,
         };
-        let buffer = Buffer {
+        let buffer = DoubleBuffer {
             chars: [[char; BUFFER_WIDTH]; BUFFER_HEIGHT],
         };
         Mutex::new(buffer)
     };
-}
-
-struct Buffer {
-    pub chars: [[ScreenChar; BUFFER_WIDTH]; BUFFER_HEIGHT],
 }
 
 fn char(char: u8, color: ColorCode) -> ScreenChar {
@@ -137,16 +133,7 @@ impl PaddleGame {
         let mut writer = WRITER.lock();
         let buffer = BUFFER.lock();
 
-        // could also try std::ptr::copy_nonoverlapping here but that would
-        // require either accessing the writer's buffer (which is private) or
-        // sending our Buffer to the writer (which is our internal type and not
-        // something we want the writer to start depending on)
-        for y in 0..self.screen.height {
-            for x in 0..self.screen.width {
-                let ch = buffer.chars[y][x];
-                writer.write_char_at(ch, x, y);
-            }
-        }
+        writer.write_double_buffer(&buffer);
     }
 
     pub fn redraw(&mut self) {

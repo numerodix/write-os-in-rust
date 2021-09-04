@@ -68,6 +68,11 @@ struct Buffer {
     chars: [[Volatile<ScreenChar>; BUFFER_WIDTH]; BUFFER_HEIGHT],
 }
 
+// an in-memory representation of the screen, for double buffering purposes
+pub struct DoubleBuffer {
+    pub chars: [[ScreenChar; BUFFER_WIDTH]; BUFFER_HEIGHT],
+}
+
 /// A writer type that allows writing ASCII bytes and strings to an underlying `Buffer`.
 ///
 /// Wraps lines at `BUFFER_WIDTH`. Supports newline characters and implements the
@@ -88,6 +93,16 @@ impl Writer {
 
     pub fn write_char_at(&mut self, char: ScreenChar, x: usize, y: usize) {
         self.buffer.chars[y][x].write(char);
+    }
+
+    pub fn write_double_buffer(&mut self, buffer: &DoubleBuffer) {
+        let src = buffer as *const DoubleBuffer as *const u8;
+        let dst = self.buffer as *mut Buffer as *mut u8;
+        let count = BUFFER_WIDTH * BUFFER_HEIGHT * 2;
+
+        unsafe {
+            no_std_compat::ptr::copy_nonoverlapping(src, dst, count);
+        }
     }
 
     /// Writes an ASCII byte to the buffer.
