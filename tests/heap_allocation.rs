@@ -11,6 +11,9 @@ use alloc::boxed::Box;
 use bootloader::{entry_point, BootInfo};
 use alloc::vec::Vec;
 use core::panic::PanicInfo;
+use blog_os::allocator;
+use blog_os::memory::{self, BootInfoFrameAllocator};
+use x86_64::VirtAddr;
 
 entry_point!(main);
 
@@ -20,10 +23,6 @@ fn panic(info: &PanicInfo) -> ! {
 }
 
 fn main(boot_info: &'static BootInfo) -> ! {
-    use blog_os::allocator;
-    use blog_os::memory::{self, BootInfoFrameAllocator};
-    use x86_64::VirtAddr;
-
     blog_os::init();
     let phys_mem_offset = VirtAddr::new(boot_info.physical_memory_offset);
     let mut mapper = unsafe { memory::init(phys_mem_offset) };
@@ -46,7 +45,6 @@ fn simple_allocation() {
     assert_eq!(*heap_value_2, 13);
 }
 
-
 #[test_case]
 fn large_vec() {
     let n = 1000;
@@ -56,7 +54,6 @@ fn large_vec() {
     }
     assert_eq!(vec.iter().sum::<u64>(), (n - 1) * n / 2);
 }
-
 
 #[test_case]
 fn many_boxes() {
@@ -68,10 +65,10 @@ fn many_boxes() {
 
 #[test_case]
 fn many_boxes_long_lived() {
-    let long_lived = Box::new(1); // new
+    let long_lived = Box::new(1);
     for i in 0..HEAP_SIZE {
         let x = Box::new(i);
         assert_eq!(*x, i);
     }
-    assert_eq!(*long_lived, 1); // new
+    assert_eq!(*long_lived, 1);
 }

@@ -3,13 +3,12 @@ pub mod keyboard;
 pub mod simple_executor;
 
 use alloc::boxed::Box;
+use core::sync::atomic::{AtomicU64, Ordering};
 use core::task::{Context, Poll};
 use core::{future::Future, pin::Pin};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 struct TaskId(u64);
-
-use core::sync::atomic::{AtomicU64, Ordering};
 
 impl TaskId {
     fn new() -> Self {

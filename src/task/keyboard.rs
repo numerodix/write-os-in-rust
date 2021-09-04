@@ -12,6 +12,7 @@ use futures_util::task::AtomicWaker;
 use pc_keyboard::{layouts, DecodedKey, HandleControl, Keyboard, ScancodeSet1};
 
 static SCANCODE_QUEUE: OnceCell<ArrayQueue<u8>> = OnceCell::uninit();
+static WAKER: AtomicWaker = AtomicWaker::new();
 
 pub(crate) fn add_scancode(scancode: u8) {
     if let Ok(queue) = SCANCODE_QUEUE.try_get() {
@@ -61,8 +62,6 @@ impl Stream for ScancodeStream {
         }
     }
 }
-
-static WAKER: AtomicWaker = AtomicWaker::new();
 
 pub async fn print_keypresses() {
     let mut scancodes = ScancodeStream::new();

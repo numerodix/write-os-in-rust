@@ -1,6 +1,4 @@
-// use bump::BumpAllocator;
 use fixed_size_block::FixedSizeBlockAllocator;
-// use linked_list_allocator::LockedHeap;
 use x86_64::{
     structures::paging::{
         mapper::MapToError, FrameAllocator, Mapper, Page, PageTableFlags, Size4KiB,

@@ -8,6 +8,12 @@ use spin;
 use x86_64::structures::idt::PageFaultErrorCode;
 use x86_64::structures::idt::{InterruptDescriptorTable, InterruptStackFrame};
 
+pub const PIC_1_OFFSET: u8 = 32;
+pub const PIC_2_OFFSET: u8 = PIC_1_OFFSET + 8;
+
+pub static PICS: spin::Mutex<ChainedPics> =
+    spin::Mutex::new(unsafe { ChainedPics::new(PIC_1_OFFSET, PIC_2_OFFSET) });
+
 lazy_static! {
     static ref IDT: InterruptDescriptorTable = {
         let mut idt = InterruptDescriptorTable::new();
@@ -29,29 +35,6 @@ pub fn init_idt() {
     IDT.load();
 }
 
-extern "x86-interrupt" fn breakpoint_handler(stack_frame: InterruptStackFrame) {
-    println!("EXCEPTION: BREAKPOINT\n{:#?}", stack_frame);
-}
-
-extern "x86-interrupt" fn double_fault_handler(
-    stack_frame: InterruptStackFrame,
-    _error_code: u64,
-) -> ! {
-    panic!("EXCEPTION: DOUBLE FAULT\n{:#?}", stack_frame);
-}
-
-#[test_case]
-fn test_breakpoint_exception() {
-    // invoke a breakpoint exception
-    x86_64::instructions::interrupts::int3();
-}
-
-pub const PIC_1_OFFSET: u8 = 32;
-pub const PIC_2_OFFSET: u8 = PIC_1_OFFSET + 8;
-
-pub static PICS: spin::Mutex<ChainedPics> =
-    spin::Mutex::new(unsafe { ChainedPics::new(PIC_1_OFFSET, PIC_2_OFFSET) });
-
 #[derive(Debug, Clone, Copy)]
 #[repr(u8)]
 pub enum InterruptIndex {
@@ -69,6 +52,17 @@ impl InterruptIndex {
     }
 }
 
+extern "x86-interrupt" fn breakpoint_handler(stack_frame: InterruptStackFrame) {
+    println!("EXCEPTION: BREAKPOINT\n{:#?}", stack_frame);
+}
+
+extern "x86-interrupt" fn double_fault_handler(
+    stack_frame: InterruptStackFrame,
+    _error_code: u64,
+) -> ! {
+    panic!("EXCEPTION: DOUBLE FAULT\n{:#?}", stack_frame);
+}
+
 extern "x86-interrupt" fn timer_interrupt_handler(_stack_frame: InterruptStackFrame) {
     print!(".");
 
@@ -79,7 +73,7 @@ extern "x86-interrupt" fn timer_interrupt_handler(_stack_frame: InterruptStackFr
 }
 
 extern "x86-interrupt" fn keyboard_interrupt_handler(_stack_frame: InterruptStackFrame) {
-    use pc_keyboard::{layouts, DecodedKey, HandleControl, Keyboard, ScancodeSet1};
+    use pc_keyboard::{layouts, HandleControl, Keyboard, ScancodeSet1};
     use spin::Mutex;
     use x86_64::instructions::port::Port;
 
@@ -89,7 +83,6 @@ extern "x86-interrupt" fn keyboard_interrupt_handler(_stack_frame: InterruptStac
         );
     }
 
-    let mut keyboard = KEYBOARD.lock();
     let mut port = Port::new(0x60);
 
     let scancode: u8 = unsafe { port.read() };
@@ -112,4 +105,10 @@ extern "x86-interrupt" fn page_fault_handler(
     println!("Error Code: {:?}", error_code);
     println!("{:#?}", stack_frame);
     hlt_loop();
+}
+
+#[test_case]
+fn test_breakpoint_exception() {
+    // invoke a breakpoint exception
+    x86_64::instructions::interrupts::int3();
 }

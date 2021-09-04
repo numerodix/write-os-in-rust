@@ -3,6 +3,11 @@ use lazy_static::lazy_static;
 use spin::Mutex;
 use volatile::Volatile;
 
+/// The height of the text buffer (normally 25 lines).
+const BUFFER_HEIGHT: usize = 25;
+/// The width of the text buffer (normally 80 columns).
+const BUFFER_WIDTH: usize = 80;
+
 lazy_static! {
     /// A global `Writer` instance that can be used for printing to the VGA text buffer.
     ///
@@ -56,11 +61,6 @@ struct ScreenChar {
     ascii_character: u8,
     color_code: ColorCode,
 }
-
-/// The height of the text buffer (normally 25 lines).
-const BUFFER_HEIGHT: usize = 25;
-/// The width of the text buffer (normally 80 columns).
-const BUFFER_WIDTH: usize = 80;
 
 /// A structure representing the VGA text buffer.
 #[repr(transparent)]
