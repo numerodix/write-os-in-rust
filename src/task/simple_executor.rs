@@ -1,5 +1,7 @@
 use super::Task;
 use alloc::collections::VecDeque;
+use core::task::{Context, Poll};
+use core::task::{RawWaker, RawWakerVTable, Waker};
 
 pub struct SimpleExecutor {
     task_queue: VecDeque<Task>,
@@ -27,9 +29,6 @@ impl SimpleExecutor {
         }
     }
 }
-
-use core::task::{Context, Poll};
-use core::task::{Waker, RawWaker, RawWakerVTable};
 
 fn dummy_raw_waker() -> RawWaker {
     fn no_op(_: *const ()) {}

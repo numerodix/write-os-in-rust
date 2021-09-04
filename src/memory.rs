@@ -1,13 +1,8 @@
 use bootloader::bootinfo::MemoryMap;
-use x86_64::{
-    structures::paging::PageTable,
-    PhysAddr,
-    VirtAddr,
-};
+use bootloader::bootinfo::MemoryRegionType;
 use x86_64::structures::paging::OffsetPageTable;
-use x86_64::{
-    structures::paging::{Page, PhysFrame, Mapper, Size4KiB, FrameAllocator}
-};
+use x86_64::structures::paging::{FrameAllocator, PhysFrame, Size4KiB};
+use x86_64::{structures::paging::PageTable, PhysAddr, VirtAddr};
 
 /// Initialize a new OffsetPageTable.
 ///
@@ -26,9 +21,7 @@ pub unsafe fn init(physical_memory_offset: VirtAddr) -> OffsetPageTable<'static>
 /// complete physical memory is mapped to virtual memory at the passed
 /// `physical_memory_offset`. Also, this function must be only called once
 /// to avoid aliasing `&mut` references (which is undefined behavior).
-unsafe fn active_level_4_table(physical_memory_offset: VirtAddr)
-    -> &'static mut PageTable
-{
+unsafe fn active_level_4_table(physical_memory_offset: VirtAddr) -> &'static mut PageTable {
     use x86_64::registers::control::Cr3;
 
     let (level_4_table_frame, _) = Cr3::read();
@@ -69,18 +62,14 @@ impl BootInfoFrameAllocator {
     }
 }
 
-use bootloader::bootinfo::MemoryRegionType;
-
 impl BootInfoFrameAllocator {
     /// Returns an iterator over the usable frames specified in the memory map.
     fn usable_frames(&self) -> impl Iterator<Item = PhysFrame> {
         // get usable regions from memory map
         let regions = self.memory_map.iter();
-        let usable_regions = regions
-            .filter(|r| r.region_type == MemoryRegionType::Usable);
+        let usable_regions = regions.filter(|r| r.region_type == MemoryRegionType::Usable);
         // map each region to its address range
-        let addr_ranges = usable_regions
-            .map(|r| r.range.start_addr()..r.range.end_addr());
+        let addr_ranges = usable_regions.map(|r| r.range.start_addr()..r.range.end_addr());
         // transform to an iterator of frame start addresses
         let frame_addresses = addr_ranges.flat_map(|r| r.step_by(4096));
         // create `PhysFrame` types from the start addresses

@@ -1,8 +1,9 @@
 use super::{Task, TaskId};
+use alloc::task::Wake;
 use alloc::{collections::BTreeMap, sync::Arc};
 use core::task::Waker;
-use crossbeam_queue::ArrayQueue;
 use core::task::{Context, Poll};
+use crossbeam_queue::ArrayQueue;
 
 pub struct Executor {
     tasks: BTreeMap<TaskId, Task>,
@@ -26,7 +27,7 @@ impl Executor {
         }
         self.task_queue.push(task_id).expect("queue full");
     }
-    
+
     fn run_ready_tasks(&mut self) {
         // destructure `self` to avoid borrow checker errors
         let Self {
@@ -91,9 +92,6 @@ impl TaskWaker {
         self.task_queue.push(self.task_id).expect("task_queue full");
     }
 }
-
-
-use alloc::task::Wake;
 
 impl Wake for TaskWaker {
     fn wake(self: Arc<Self>) {

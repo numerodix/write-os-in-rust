@@ -6,10 +6,12 @@
 
 extern crate alloc;
 
-use alloc::boxed::Box;
+use blog_os::allocator;
+use blog_os::memory::{self, BootInfoFrameAllocator};
 use blog_os::println;
-use bootloader::{BootInfo, entry_point};
+use bootloader::{entry_point, BootInfo};
 use core::panic::PanicInfo;
+use x86_64::VirtAddr;
 
 entry_point!(kernel_main);
 
@@ -18,23 +20,14 @@ pub fn kernel_main(boot_info: &'static BootInfo) -> ! {
     println!("Hello World{}", "!");
     blog_os::init();
 
-    use blog_os::allocator; // new import
-    use blog_os::memory::{self, BootInfoFrameAllocator};
-    use x86_64::VirtAddr;
-    use alloc::{boxed::Box, vec, vec::Vec, rc::Rc};
-
-
     let phys_mem_offset = VirtAddr::new(boot_info.physical_memory_offset);
     let mut mapper = unsafe { memory::init(phys_mem_offset) };
-    let mut frame_allocator = unsafe {
-        BootInfoFrameAllocator::init(&boot_info.memory_map)
-    };
+    let mut frame_allocator = unsafe { BootInfoFrameAllocator::init(&boot_info.memory_map) };
 
-    allocator::init_heap(&mut mapper, &mut frame_allocator)
-        .expect("heap initialization failed");
-    
-    use blog_os::task::{Task, executor::Executor};
+    allocator::init_heap(&mut mapper, &mut frame_allocator).expect("heap initialization failed");
+
     use blog_os::task::keyboard;
+    use blog_os::task::{executor::Executor, Task};
 
     #[cfg(test)]
     test_main();

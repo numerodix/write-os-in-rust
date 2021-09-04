@@ -11,11 +11,10 @@ extern crate alloc;
 
 #[cfg(test)]
 use bootloader::{entry_point, BootInfo};
+use core::panic::PanicInfo;
 
 #[cfg(test)]
 entry_point!(test_kernel_main);
-
-use core::panic::PanicInfo;
 
 pub mod allocator;
 pub mod gdt;
@@ -97,7 +96,6 @@ pub fn init() {
     unsafe { interrupts::PICS.lock().initialize() };
     x86_64::instructions::interrupts::enable();
 }
-
 
 #[alloc_error_handler]
 fn alloc_error_handler(layout: alloc::alloc::Layout) -> ! {

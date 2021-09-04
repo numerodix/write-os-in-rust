@@ -6,7 +6,10 @@
 
 extern crate alloc;
 
+use blog_os::allocator::HEAP_SIZE;
+use alloc::boxed::Box;
 use bootloader::{entry_point, BootInfo};
+use alloc::vec::Vec;
 use core::panic::PanicInfo;
 
 entry_point!(main);
@@ -34,7 +37,6 @@ fn main(boot_info: &'static BootInfo) -> ! {
     loop {}
 }
 
-use alloc::boxed::Box;
 
 #[test_case]
 fn simple_allocation() {
@@ -44,7 +46,6 @@ fn simple_allocation() {
     assert_eq!(*heap_value_2, 13);
 }
 
-use alloc::vec::Vec;
 
 #[test_case]
 fn large_vec() {
@@ -56,7 +57,6 @@ fn large_vec() {
     assert_eq!(vec.iter().sum::<u64>(), (n - 1) * n / 2);
 }
 
-use blog_os::allocator::HEAP_SIZE;
 
 #[test_case]
 fn many_boxes() {
