@@ -42,35 +42,52 @@ impl Screen {
     }
 }
 
-pub struct Ball {
-    pos_x: usize,
-    pos_y: usize,
-    dir: i8,
+struct Velocity {
+    x: i8,
+    y: i8,
+    // speed
+}
+
+struct Ball {
+    pos_x: i8,
+    pos_y: i8,
+    velocity: Velocity,
     color: ColorCode,
 }
 
 impl Ball {
     pub fn advance(&mut self, screen: &Screen) {
-        // moving to the right
-        if self.dir > 0 {
-            self.pos_x += 1;
-            // bounce off right wall
-            if self.pos_x > screen.width - 2 {
-                self.dir = -1;
-                self.pos_x -= 2;
-            }
-        } else {
-            self.pos_x -= 1;
-            // bounce off left wall
-            if self.pos_x < 1 {
-                self.dir = 1;
-                self.pos_x += 2;
-            }
+        self.pos_x += self.velocity.x;
+        self.pos_y += self.velocity.y;
+
+        // bounce off left wall
+        if self.pos_x < 1 {
+            self.velocity.x *= -1;
+            self.pos_x += 2;
+        }
+
+        // bounce off right wall
+        if self.pos_x > screen.width as i8 - 2 {
+            self.velocity.x *= -1;
+            self.pos_x -= 2;
+        }
+
+        // bounce off top wall
+        if self.pos_y < 1 {
+            self.velocity.y *= -1;
+            self.pos_y += 2;
+        }
+
+        // bounce off bottom wall
+        if self.pos_y > screen.height as i8 - 2 {
+            self.velocity.y *= -1;
+            self.pos_y -= 2;
         }
     }
 }
 
 pub struct PaddleGame {
+    ticks: u64,
     screen: Screen,
     ball: Ball,
     text_color: ColorCode,
@@ -82,13 +99,14 @@ impl PaddleGame {
         let ball = Ball {
             pos_x: 40,
             pos_y: 12,
-            dir: 1,
+            velocity: Velocity { x: 1, y: -1 },
             color,
         };
 
         let text_color = ColorCode::new(Color::White, Color::Black);
 
         PaddleGame {
+            ticks: 0,
             screen,
             ball,
             text_color,
@@ -126,7 +144,9 @@ impl PaddleGame {
     pub fn draw_ball(&mut self) {
         let mut buffer = BUFFER.lock();
 
-        buffer.chars[self.ball.pos_y][self.ball.pos_x] = char(b'o', self.ball.color);
+        let x = self.ball.pos_x as usize;
+        let y = self.ball.pos_y as usize;
+        buffer.chars[y][x] = char(b'o', self.ball.color);
     }
 
     pub fn paint_buffer(&self) {
@@ -137,6 +157,8 @@ impl PaddleGame {
     }
 
     pub fn redraw(&mut self) {
+        self.ticks += 1;
+
         self.clear_screen();
 
         self.draw_screen_border();
