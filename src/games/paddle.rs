@@ -275,7 +275,7 @@ impl PaddleGame {
         let right_paddle = Paddle {
             side: PaddleSide::Right,
             length,
-            pos_x: screen.width as i8 - 4,
+            pos_x: screen.width as i8 - 3,
             pos_y,
             color: paddle_color,
             dir: PaddleMoveDirection::None,
