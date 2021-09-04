@@ -10,6 +10,19 @@ lazy_static! {
     };
 }
 
+lazy_static! {
+    static ref BUFFER: Mutex<Buffer> = {
+        let buffer = Buffer {
+            chars: [[0; BUFFER_WIDTH]; BUFFER_HEIGHT],
+        };
+        Mutex::new(buffer)
+    };
+}
+
+struct Buffer {
+    pub chars: [[u8; BUFFER_WIDTH]; BUFFER_HEIGHT],
+}
+
 pub struct Screen {
     width: usize,
     height: usize,
@@ -75,37 +88,49 @@ impl PaddleGame {
     }
 
     pub fn clear_screen(&self) {
-        let mut writer = WRITER.lock();
+        let mut buffer = BUFFER.lock();
 
         for y in 0..self.screen.height {
             for x in 0..self.screen.width {
-                writer.write_byte_at(b' ', x, y, self.text_color);
+                buffer.chars[y][x] = b' ';
             }
         }
     }
 
     pub fn draw_screen_border(&self) {
-        let mut writer = WRITER.lock();
+        let mut buffer = BUFFER.lock();
 
         for y in 0..self.screen.height {
             // left edge
-            writer.write_byte_at(b'|', 0, y, self.text_color);
+            buffer.chars[y][0] = b'|';
             // right edge
-            writer.write_byte_at(b'|', self.screen.width - 1, y, self.text_color);
+            buffer.chars[y][self.screen.width - 1] = b'|';
         }
 
         for x in 0..self.screen.width {
             // top edge
-            writer.write_byte_at(b'-', x, 0, self.text_color);
+            buffer.chars[0][x] = b'-';
             // bottom edge
-            writer.write_byte_at(b'-', x, self.screen.height - 1, self.text_color);
+            buffer.chars[self.screen.height - 1][x] = b'-';
         }
     }
 
     pub fn draw_ball(&mut self) {
-        let mut writer = WRITER.lock();
+        let mut buffer = BUFFER.lock();
 
-        writer.write_byte_at(b'o', self.ball.pos_x, self.ball.pos_y, self.ball.color);
+        buffer.chars[self.ball.pos_y][self.ball.pos_x] = b'o';
+    }
+
+    pub fn paint_buffer(&self) {
+        let mut writer = WRITER.lock();
+        let buffer = BUFFER.lock();
+
+        for y in 0..self.screen.height {
+            for x in 0..self.screen.width {
+                let ch = buffer.chars[y][x];
+                writer.write_byte_at(ch, x, y, self.text_color);
+            }
+        }
     }
 
     pub fn redraw(&mut self) {
@@ -113,6 +138,8 @@ impl PaddleGame {
 
         self.draw_screen_border();
         self.draw_ball();
+
+        self.paint_buffer();
 
         self.ball.advance(&self.screen);
     }
