@@ -99,62 +99,54 @@ impl Paddle {
         let mid = screen.width as i8 / 2;
         let mid_less1 = mid - 1;
 
-        let mut toward_us = false;
+        let mut moving_toward_us = false;
+
+        let mut ballpos = ball.pos.clone();
 
         // just crossed over the midpoint of the screen
-        if ball.pos_x == mid || ball.pos_x == mid_less1 {
-            let mut ball_pos_x = ball.pos_x;
-            let mut ball_pos_y = ball.pos_y;
-
+        if ballpos.x == mid || ballpos.x == mid_less1 {
             // moving toward us?
-            if self.side == PaddleSide::Left && ball.velocity.x < 0 {
-                toward_us = true;
+            if self.side == PaddleSide::Left && ballpos.velocity.x < 0 {
+                moving_toward_us = true;
 
-                // simulate advancing ball to our y position
-                while ball_pos_x > self.pos_x {
-                    ball_pos_x += ball.velocity.x;
-                    ball_pos_y += ball.velocity.y;
+                // simulate advancing ball to our x position
+                while self.pos_x < ballpos.x {
+                    ballpos.advance(screen);
                 }
             }
 
             // moving toward us?
-            if self.side == PaddleSide::Right && ball.velocity.x > 0 {
-                toward_us = true;
-                // simulate advancing ball to our y position
+            if self.side == PaddleSide::Right && ballpos.velocity.x > 0 {
+                moving_toward_us = true;
 
-                while ball_pos_x < self.pos_x {
-                    ball_pos_x += ball.velocity.x;
-                    ball_pos_y += ball.velocity.y;
+                // simulate advancing ball to our x position
+                while ballpos.x < self.pos_x {
+                    ballpos.advance(screen);
                 }
             }
 
-            if toward_us == true {
-                // if above the screen simulate a bounce off the top edge
-                if ball_pos_y < 0 {
-                    ball_pos_y *= -1;
-                }
-
-                // if below the screen simulate a bounce off the bottom edge
-                if ball_pos_y > screen.height as i8 - 1 {
-                    ball_pos_y -= screen.height as i8;
-                }
-
+            if moving_toward_us == true {
                 // it's going to impact above us
-                if ball_pos_y < self.pos_y {
+                if ballpos.y < self.pos_y {
                     self.dir = PaddleMoveDirection::Up;
-                    self.displace_units = self.pos_y - ball_pos_y;
-                }
+                    self.displace_units = self.pos_y - ballpos.y;
 
                 // it's going to impact below us
-                if ball_pos_y > (self.pos_y + self.length) {
+                } else if ballpos.y > (self.pos_y + self.length) {
                     self.dir = PaddleMoveDirection::Down;
-                    self.displace_units = ball_pos_y - (self.pos_y + self.length);
+                    self.displace_units = ballpos.y - (self.pos_y + self.length);
+
+                // it's going to impact us
+                } else {
+                    self.dir = PaddleMoveDirection::None;
+                    self.displace_units = 0;
                 }
 
                 serial_println!(
-                    "ball_pos_y: {}, self.pos_y: {} -> units: {}, dir: {:?}",
-                    ball_pos_y,
+                    "ballpos_y: {}, self.pos_y: [{} - {}] -> units: {}, dir: {:?}",
+                    ballpos.y,
                     self.pos_y,
+                    self.pos_y + self.length,
                     self.displace_units,
                     self.dir
                 );
@@ -174,12 +166,14 @@ impl Paddle {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct Velocity {
     x: i8,
     y: i8,
     // speed
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct BallPosition {
     x: i8,
     y: i8,
@@ -220,9 +214,6 @@ impl BallPosition {
 }
 
 struct Ball {
-    pos_x: i8,
-    pos_y: i8,
-    velocity: Velocity,
     pos: BallPosition,
     color: ColorCode,
 }
@@ -230,44 +221,16 @@ struct Ball {
 impl Ball {
     pub fn advance(&mut self, screen: &Screen, left_paddle: &Paddle, right_paddle: &Paddle) {
         self.pos.advance(screen);
-        // self.pos_x += self.velocity.x;
-        // self.pos_y += self.velocity.y;
-
-        // // bounce off left wall
-        // if self.pos_x < 1 {
-        //     serial_println!("hit left wall at pos_y: {}", self.pos_y);
-        //     self.velocity.x *= -1;
-        //     self.pos_x += 2;
-        // }
-
-        // // bounce off right wall
-        // if self.pos_x > screen.width as i8 - 2 {
-        //     serial_println!("hit right wall at pos_y: {}", self.pos_y);
-        //     self.velocity.x *= -1;
-        //     self.pos_x -= 2;
-        // }
-
-        // // bounce off top wall
-        // if self.pos_y < 1 {
-        //     self.velocity.y *= -1;
-        //     self.pos_y += 2;
-        // }
-
-        // // bounce off bottom wall
-        // if self.pos_y > screen.height as i8 - 2 {
-        //     self.velocity.y *= -1;
-        //     self.pos_y -= 2;
-        // }
 
         // bounce off left paddle
         if left_paddle.intersects(&self.pos) {
-            self.velocity.x *= -1;
+            self.pos.velocity.x *= -1;
             self.pos.x += 2;
         }
 
         // bounce off right paddle
         if right_paddle.intersects(&self.pos) {
-            self.velocity.x *= -1;
+            self.pos.velocity.x *= -1;
             self.pos.x -= 2;
         }
     }
@@ -288,18 +251,15 @@ impl PaddleGame {
         let paddle_color = ColorCode::new(Color::Yellow, Color::Black);
 
         let ball = Ball {
-            pos_x: 40,
-            pos_y: 12,
-            velocity: Velocity { x: 2, y: -1 },
             pos: BallPosition {
-                x: 40,
-                y: 12,
+                x: screen.width as i8 / 4,
+                y: screen.height as i8 / 2,
                 velocity: Velocity { x: 2, y: -1 },
             },
             color: ball_color,
         };
 
-        let length = 8;
+        let length = 1;
         let mid_y = screen.height as i8 / 2;
         let pos_y = mid_y - (length / 2);
 
