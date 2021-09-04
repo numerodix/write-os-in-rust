@@ -1,5 +1,5 @@
-use bootloader::BootInfo;
 use crate::memory::{self, BootInfoFrameAllocator};
+use bootloader::BootInfo;
 use fixed_size_block::FixedSizeBlockAllocator;
 use x86_64::{
     structures::paging::{
