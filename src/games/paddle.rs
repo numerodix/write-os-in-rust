@@ -1,5 +1,6 @@
-use crate::vga_buffer::{
-    Color, ColorCode, DoubleBuffer, ScreenChar, BUFFER_HEIGHT, BUFFER_WIDTH, WRITER,
+use crate::{
+    serial_println,
+    vga_buffer::{Color, ColorCode, DoubleBuffer, ScreenChar, BUFFER_HEIGHT, BUFFER_WIDTH, WRITER},
 };
 use lazy_static::lazy_static;
 use spin::Mutex;
@@ -50,12 +51,23 @@ enum PaddleSide {
     Right,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum PaddleMoveDirection {
+    None,
+    Up,
+    Down,
+}
+
 struct Paddle {
     side: PaddleSide,
     length: i8,
     pos_x: i8, // the column (paddle is one char wide)
     pos_y: i8, // top of paddle
     color: ColorCode,
+
+    // movement
+    dir: PaddleMoveDirection,
+    displace_units: i8,
 }
 
 impl Paddle {
@@ -76,6 +88,89 @@ impl Paddle {
         }
 
         return false;
+    }
+
+    fn program_move(&mut self, screen: &Screen, ball: &Ball) {
+        // do nothing - we're in the middle of a programmed move
+        if self.displace_units > 0 {
+            return;
+        }
+
+        let mid = screen.width as i8 / 2;
+        let mid_less1 = mid - 1;
+
+        let mut toward_us = false;
+
+        // just crossed over the midpoint of the screen
+        if ball.pos_x == mid || ball.pos_x == mid_less1 {
+            let mut ball_pos_x = ball.pos_x;
+            let mut ball_pos_y = ball.pos_y;
+
+            // moving toward us?
+            if self.side == PaddleSide::Left && ball.velocity.x < 0 {
+                toward_us = true;
+
+                // simulate advancing ball to our y position
+                while ball_pos_x > self.pos_x {
+                    ball_pos_x += ball.velocity.x;
+                    ball_pos_y += ball.velocity.y;
+                }
+            }
+
+            // moving toward us?
+            if self.side == PaddleSide::Right && ball.velocity.x > 0 {
+                toward_us = true;
+                // simulate advancing ball to our y position
+
+                while ball_pos_x < self.pos_x {
+                    ball_pos_x += ball.velocity.x;
+                    ball_pos_y += ball.velocity.y;
+                }
+            }
+
+            if toward_us == true {
+                // if above the screen simulate a bounce off the top edge
+                if ball_pos_y < 0 {
+                    ball_pos_y *= -1;
+                }
+
+                // if below the screen simulate a bounce off the bottom edge
+                if ball_pos_y > screen.height as i8 - 1 {
+                    ball_pos_y -= screen.height as i8;
+                }
+
+                // it's going to impact above us
+                if ball_pos_y < self.pos_y {
+                    self.dir = PaddleMoveDirection::Up;
+                    self.displace_units = self.pos_y - ball_pos_y;
+                }
+
+                // it's going to impact below us
+                if ball_pos_y > (self.pos_y + self.length) {
+                    self.dir = PaddleMoveDirection::Down;
+                    self.displace_units = ball_pos_y - (self.pos_y + self.length);
+                }
+
+                serial_println!(
+                    "ball_pos_y: {}, self.pos_y: {} -> units: {}, dir: {:?}",
+                    ball_pos_y,
+                    self.pos_y,
+                    self.displace_units,
+                    self.dir
+                );
+            }
+        }
+    }
+
+    fn advance(&mut self) {
+        if self.displace_units > 0 {
+            self.displace_units -= 1;
+            if self.dir == PaddleMoveDirection::Up {
+                self.pos_y -= 1;
+            } else if self.dir == PaddleMoveDirection::Down {
+                self.pos_y += 1;
+            }
+        }
     }
 }
 
@@ -99,12 +194,14 @@ impl Ball {
 
         // bounce off left wall
         if self.pos_x < 1 {
+            serial_println!("hit left wall at pos_y: {}", self.pos_y);
             self.velocity.x *= -1;
             self.pos_x += 2;
         }
 
         // bounce off right wall
         if self.pos_x > screen.width as i8 - 2 {
+            serial_println!("hit right wall at pos_y: {}", self.pos_y);
             self.velocity.x *= -1;
             self.pos_x -= 2;
         }
@@ -166,6 +263,8 @@ impl PaddleGame {
             pos_x: 3,
             pos_y,
             color: paddle_color,
+            dir: PaddleMoveDirection::None,
+            displace_units: 0,
         };
         let right_paddle = Paddle {
             side: PaddleSide::Right,
@@ -173,6 +272,8 @@ impl PaddleGame {
             pos_x: screen.width as i8 - 4,
             pos_y,
             color: paddle_color,
+            dir: PaddleMoveDirection::None,
+            displace_units: 0,
         };
 
         let text_color = ColorCode::new(Color::White, Color::Black);
@@ -245,6 +346,15 @@ impl PaddleGame {
     pub fn redraw(&mut self) {
         self.ticks += 1;
 
+        self.ball
+            .advance(&self.screen, &self.left_paddle, &self.right_paddle);
+
+        self.left_paddle.program_move(&self.screen, &self.ball);
+        self.left_paddle.advance();
+
+        self.right_paddle.program_move(&self.screen, &self.ball);
+        self.right_paddle.advance();
+
         self.clear_screen();
 
         self.draw_screen_border();
@@ -254,8 +364,5 @@ impl PaddleGame {
         }
 
         self.paint_buffer();
-
-        self.ball
-            .advance(&self.screen, &self.left_paddle, &self.right_paddle);
     }
 }
