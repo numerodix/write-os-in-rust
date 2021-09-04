@@ -137,6 +137,10 @@ impl PaddleGame {
         let mut writer = WRITER.lock();
         let buffer = BUFFER.lock();
 
+        // could also try std::ptr::copy_nonoverlapping here but that would
+        // require either accessing the writer's buffer (which is private) or
+        // sending our Buffer to the writer (which is our internal type and not
+        // something we want the writer to start depending on)
         for y in 0..self.screen.height {
             for x in 0..self.screen.width {
                 let ch = buffer.chars[y][x];
