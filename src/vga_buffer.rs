@@ -95,6 +95,18 @@ impl Writer {
         self.buffer.chars[y][x].write(char);
     }
 
+    pub fn write_string_at(&mut self, s: &str, x: usize, y: usize, color: ColorCode) {
+        let mut x = x;
+        for byte in s.bytes() {
+            let char = ScreenChar {
+                ascii_character: byte,
+                color_code: color,
+            };
+            self.write_char_at(char, x, y);
+            x += 1;
+        }
+    }
+
     pub fn write_double_buffer(&mut self, buffer: &DoubleBuffer) {
         let src = buffer as *const DoubleBuffer as *const u8;
         let dst = self.buffer as *mut Buffer as *mut u8;
@@ -134,7 +146,7 @@ impl Writer {
     /// Wraps lines at `BUFFER_WIDTH`. Supports the `\n` newline character. Does **not**
     /// support strings with non-ASCII characters, since they can't be printed in the VGA text
     /// mode.
-    fn write_string(&mut self, s: &str) {
+    pub fn write_string(&mut self, s: &str) {
         for byte in s.bytes() {
             match byte {
                 // printable ASCII byte or newline

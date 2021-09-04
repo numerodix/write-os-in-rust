@@ -187,22 +187,32 @@ struct BallPosition {
 }
 
 impl BallPosition {
-    pub fn advance(&mut self, screen: &Screen) {
+    pub fn default(screen: &Screen) -> Self {
+        BallPosition {
+            x: screen.width as i8 / 4,
+            y: screen.height as i8 / 2,
+            velocity: Velocity { x: 2, y: -1 },
+        }
+    }
+
+    pub fn advance(&mut self, screen: &Screen) -> Option<GameState> {
         self.x += self.velocity.x;
         self.y += self.velocity.y;
 
         // bounce off left wall
         if self.x < 1 {
-            serial_println!("hit left wall at pos_y: {}", self.y);
-            self.velocity.x *= -1;
-            self.x += 2;
+            return Some(GameState::GameOver);
+            // serial_println!("hit left wall at pos_y: {}", self.y);
+            // self.velocity.x *= -1;
+            // self.x += 2;
         }
 
         // bounce off right wall
         if self.x > screen.width as i8 - 2 {
-            serial_println!("hit right wall at pos_y: {}", self.y);
-            self.velocity.x *= -1;
-            self.x -= 2;
+            return Some(GameState::GameOver);
+            // serial_println!("hit right wall at pos_y: {}", self.y);
+            // self.velocity.x *= -1;
+            // self.x -= 2;
         }
 
         // bounce off top wall
@@ -216,6 +226,8 @@ impl BallPosition {
             self.velocity.y *= -1;
             self.y -= 2;
         }
+
+        None
     }
 }
 
@@ -225,8 +237,15 @@ struct Ball {
 }
 
 impl Ball {
-    pub fn advance(&mut self, screen: &Screen, left_paddle: &Paddle, right_paddle: &Paddle) {
-        self.pos.advance(screen);
+    pub fn advance(
+        &mut self,
+        screen: &Screen,
+        left_paddle: &Paddle,
+        right_paddle: &Paddle,
+    ) -> Option<GameState> {
+        if let Some(state) = self.pos.advance(screen) {
+            return Some(state);
+        }
 
         // bounce off left paddle
         if left_paddle.intersects(&self.pos) {
@@ -239,11 +258,20 @@ impl Ball {
             self.pos.velocity.x *= -1;
             self.pos.x -= 2;
         }
+
+        None
     }
+}
+
+enum GameState {
+    Waiting,
+    Playing,
+    GameOver,
 }
 
 pub struct PaddleGame {
     ticks: u64,
+    state: GameState,
     screen: Screen,
     ball: Ball,
     left_paddle: Paddle,
@@ -257,11 +285,7 @@ impl PaddleGame {
         let paddle_color = ColorCode::new(Color::Yellow, Color::Black);
 
         let ball = Ball {
-            pos: BallPosition {
-                x: screen.width as i8 / 4,
-                y: screen.height as i8 / 2,
-                velocity: Velocity { x: 2, y: -1 },
-            },
+            pos: BallPosition::default(&screen),
             color: ball_color,
         };
 
@@ -292,6 +316,7 @@ impl PaddleGame {
 
         PaddleGame {
             ticks: 0,
+            state: GameState::Waiting,
             screen,
             ball,
             text_color,
@@ -356,20 +381,44 @@ impl PaddleGame {
     }
 
     pub fn keypress(&mut self, ch: char) {
-        if ch == '8' {
-            self.right_paddle.dir = PaddleMoveDirection::Up;
-            self.right_paddle.displace_units = 1;
-        } else if ch == '2' {
-            self.right_paddle.dir = PaddleMoveDirection::Down;
-            self.right_paddle.displace_units = 1;
+        match self.state {
+            GameState::Waiting => {
+                self.state = GameState::Playing;
+            }
+            GameState::Playing => {
+                if ch == '8' {
+                    self.right_paddle.dir = PaddleMoveDirection::Up;
+                    self.right_paddle.displace_units = 1;
+                } else if ch == '2' {
+                    self.right_paddle.dir = PaddleMoveDirection::Down;
+                    self.right_paddle.displace_units = 1;
+                }
+            }
+            GameState::GameOver => {
+                self.state = GameState::Playing;
+                self.ball.pos = BallPosition::default(&self.screen);
+            }
         }
     }
 
-    pub fn redraw(&mut self) {
+    pub fn redraw_waiting(&mut self) {
+        self.clear_screen();
+        self.paint_buffer();
+
+        let mut writer = WRITER.lock();
+        writer.write_string_at("press any key to start game...", 0, 0, self.text_color);
+    }
+
+    pub fn redraw_playing(&mut self) {
         self.ticks += 1;
 
-        self.ball
-            .advance(&self.screen, &self.left_paddle, &self.right_paddle);
+        if let Some(state) = self
+            .ball
+            .advance(&self.screen, &self.left_paddle, &self.right_paddle)
+        {
+            self.state = state;
+            return;
+        }
 
         self.left_paddle.program_move(&self.screen, &self.ball);
         self.left_paddle.advance(&self.screen);
@@ -386,5 +435,32 @@ impl PaddleGame {
         }
 
         self.paint_buffer();
+    }
+
+    pub fn redraw_game_over(&mut self) {
+        self.clear_screen();
+        self.paint_buffer();
+
+        let mut writer = WRITER.lock();
+        writer.write_string_at(
+            "game over. press any key to restart game...",
+            0,
+            0,
+            self.text_color,
+        );
+    }
+
+    pub fn redraw(&mut self) {
+        match self.state {
+            GameState::Waiting => {
+                self.redraw_waiting();
+            }
+            GameState::Playing => {
+                self.redraw_playing();
+            }
+            GameState::GameOver => {
+                self.redraw_game_over();
+            }
+        }
     }
 }
