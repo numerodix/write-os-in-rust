@@ -7,6 +7,7 @@
 extern crate alloc;
 
 use blog_os::allocator::init_allocation_system;
+use blog_os::games::paddle;
 use blog_os::println;
 use blog_os::task::keyboard;
 use blog_os::task::{executor::Executor, Task};
@@ -17,7 +18,7 @@ entry_point!(kernel_main);
 
 #[no_mangle]
 pub fn kernel_main(boot_info: &'static BootInfo) -> ! {
-    println!("Hello World{}", "!");
+    // println!("Hello World{}", "!");
     blog_os::init();
     init_allocation_system(boot_info);
 
@@ -25,7 +26,7 @@ pub fn kernel_main(boot_info: &'static BootInfo) -> ! {
     test_main();
 
     let mut executor = Executor::new();
-    executor.spawn(Task::new(keyboard::print_keypresses()));
+    // executor.spawn(Task::new(keyboard::print_keypresses()));
     executor.run();
 }
 

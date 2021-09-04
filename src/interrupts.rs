@@ -1,3 +1,4 @@
+use crate::games::paddle::PADDLE_GAME;
 use crate::gdt;
 use crate::hlt_loop;
 use crate::print;
@@ -64,7 +65,8 @@ extern "x86-interrupt" fn double_fault_handler(
 }
 
 extern "x86-interrupt" fn timer_interrupt_handler(_stack_frame: InterruptStackFrame) {
-    print!(".");
+    // print!(".");
+    PADDLE_GAME.lock().redraw();
 
     unsafe {
         PICS.lock()
@@ -86,7 +88,7 @@ extern "x86-interrupt" fn keyboard_interrupt_handler(_stack_frame: InterruptStac
     let mut port = Port::new(0x60);
 
     let scancode: u8 = unsafe { port.read() };
-    crate::task::keyboard::add_scancode(scancode);
+    // crate::task::keyboard::add_scancode(scancode);
 
     unsafe {
         PICS.lock()
