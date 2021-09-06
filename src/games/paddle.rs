@@ -282,7 +282,8 @@ pub struct PaddleGame {
 impl PaddleGame {
     pub fn new(screen: Screen) -> Self {
         let ball_color = ColorCode::new(Color::Green, Color::Black);
-        let paddle_color = ColorCode::new(Color::Yellow, Color::Black);
+        let left_paddle_color = ColorCode::new(Color::Yellow, Color::Black);
+        let right_paddle_color = ColorCode::new(Color::LightBlue, Color::Black);
 
         let ball = Ball {
             pos: BallPosition::default(&screen),
@@ -298,7 +299,7 @@ impl PaddleGame {
             length,
             pos_x: 3,
             pos_y,
-            color: paddle_color,
+            color: left_paddle_color,
             dir: PaddleMoveDirection::None,
             displace_units: 0,
         };
@@ -307,7 +308,7 @@ impl PaddleGame {
             length,
             pos_x: screen.width as i8 - 3,
             pos_y,
-            color: paddle_color,
+            color: right_paddle_color,
             dir: PaddleMoveDirection::None,
             displace_units: 0,
         };
@@ -392,6 +393,12 @@ impl PaddleGame {
                 } else if ch == '2' {
                     self.right_paddle.dir = PaddleMoveDirection::Down;
                     self.right_paddle.displace_units = 1;
+                } else if ch == 'w' {
+                    self.left_paddle.dir = PaddleMoveDirection::Up;
+                    self.left_paddle.displace_units = 1;
+                } else if ch == 's' {
+                    self.left_paddle.dir = PaddleMoveDirection::Down;
+                    self.left_paddle.displace_units = 1;
                 }
             }
             GameState::GameOver => {
@@ -423,7 +430,7 @@ impl PaddleGame {
         self.left_paddle.program_move(&self.screen, &self.ball);
         self.left_paddle.advance(&self.screen);
 
-        // self.right_paddle.program_move(&self.screen, &self.ball);
+        self.right_paddle.program_move(&self.screen, &self.ball);
         self.right_paddle.advance(&self.screen);
 
         self.clear_screen();
