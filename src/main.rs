@@ -15,10 +15,11 @@ use core::panic::PanicInfo;
 
 entry_point!(kernel_main);
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct PciDevice {
     pub vendor: u16,
     pub device: u16,
-    pub class: u32,
+    pub class: u8,
 }
 
 pub fn read_dword(bus: u8, device: u8, function: u8, offset: u8) -> u32 {
@@ -36,17 +37,16 @@ pub fn read_dword(bus: u8, device: u8, function: u8, offset: u8) -> u32 {
     unsafe { port_out.write(add) };
     let reply: u32 = unsafe { port_in.read() };
 
-    // (reply >> ((offset & 2) * 8)) & 0xffff
-    reply
+    reply >> ((offset & 2) * 8)
 }
 
-pub fn read_pci_vendor(bus: u8, device: u8) -> PciDevice {
+pub fn read_pci_device(bus: u8, device: u8) -> PciDevice {
     let signature = read_dword(bus, device, 0, 0);
-    let class = read_dword(bus, device, 0, 8);
+    let class_dword = read_dword(bus, device, 0, 8);
 
     let vendor: u16 = (signature & 0xffff) as u16;
     let device: u16 = (signature >> 16) as u16;
-    let class = class & 0xffffff;
+    let class = (class_dword >> 24) as u8;
 
     PciDevice {
         vendor,
@@ -67,8 +67,21 @@ pub fn kernel_main(boot_info: &'static BootInfo) -> ! {
 
     for bus_id in 0..1 {
         for dev_id in 0..4 {
-            let dev = read_pci_vendor(bus_id, dev_id);
-            // serial_println!("bus: {}  dev: {}  got: 0b{:b}", bus_id, dev_id, reply);
+            // let mut offset = 0;
+            // let val = read_dword(bus_id, dev_id, 0, offset);
+            // serial_println!("bus: {}  dev: {}  offset: {}  got: 0x{:x}", bus_id, dev_id, offset, val);
+
+            // offset = 4;
+            // let val = read_dword(bus_id, dev_id, 0, offset);
+            // serial_println!("bus: {}  dev: {}  offset: {}  got: 0x{:x}", bus_id, dev_id, offset, val);
+
+            // let offset = 8;
+            // let val = read_dword(bus_id, dev_id, 0, offset);
+            // serial_println!("bus: {}  dev: {}  offset: {}  got: 0x{:x}", bus_id, dev_id, offset, val);
+
+            // serial_println!();
+
+            let dev = read_pci_device(bus_id, dev_id);
             serial_println!(
                 "bus: {}  dev: {}  ::  vendor: 0x{:x}  device: 0x{:x}  class: 0x{:x}",
                 bus_id,
