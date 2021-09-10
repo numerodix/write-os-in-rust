@@ -3,7 +3,7 @@
 #![feature(abi_x86_interrupt)]
 
 use blog_os::serial_print;
-use blog_os::{exit_qemu, QemuExitCode, serial_println};
+use blog_os::{exit_qemu, serial_println, QemuExitCode};
 use core::panic::PanicInfo;
 use lazy_static::lazy_static;
 use x86_64::structures::idt::InterruptDescriptorTable;
