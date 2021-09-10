@@ -6,13 +6,13 @@
 
 extern crate alloc;
 
-use blog_os::allocator::HEAP_SIZE;
 use alloc::boxed::Box;
-use bootloader::{entry_point, BootInfo};
 use alloc::vec::Vec;
-use core::panic::PanicInfo;
 use blog_os::allocator;
+use blog_os::allocator::HEAP_SIZE;
 use blog_os::memory::{self, BootInfoFrameAllocator};
+use bootloader::{entry_point, BootInfo};
+use core::panic::PanicInfo;
 use x86_64::VirtAddr;
 
 entry_point!(main);
@@ -26,16 +26,12 @@ fn main(boot_info: &'static BootInfo) -> ! {
     blog_os::init();
     let phys_mem_offset = VirtAddr::new(boot_info.physical_memory_offset);
     let mut mapper = unsafe { memory::init(phys_mem_offset) };
-    let mut frame_allocator = unsafe {
-        BootInfoFrameAllocator::init(&boot_info.memory_map)
-    };
-    allocator::init_heap(&mut mapper, &mut frame_allocator)
-        .expect("heap initialization failed");
+    let mut frame_allocator = unsafe { BootInfoFrameAllocator::init(&boot_info.memory_map) };
+    allocator::init_heap(&mut mapper, &mut frame_allocator).expect("heap initialization failed");
 
     test_main();
     loop {}
 }
-
 
 #[test_case]
 fn simple_allocation() {
