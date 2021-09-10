@@ -9,7 +9,24 @@ pub const CONFIG_DATA: u16 = 0xCFC;
 #[derive(Debug, Clone, Copy, IntoEnumIterator, PartialEq, Eq)]
 #[repr(u16)]
 pub enum PCI_VENDOR_ID {
+    AdvancedMicroDevices = 0x1022,
     Intel = 0x8086,
+    Realtek = 0x10EC,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PciVendor {
+    Known(PCI_VENDOR_ID),
+    Unknown(u16),
+}
+
+impl PciVendor {
+    fn display(&self) -> String {
+        match self {
+            Self::Known(_) => format!("{:?}", self),
+            Self::Unknown(id) => format!("Unknown(0x{:x})", id),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, IntoEnumIterator, PartialEq, Eq)]
@@ -25,6 +42,21 @@ pub enum PCI_DEVICE_CLASS {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PciDeviceClass {
+    Known(PCI_DEVICE_CLASS),
+    Unknown(u8),
+}
+
+impl PciDeviceClass {
+    fn display(&self) -> String {
+        match self {
+            Self::Known(_) => format!("{:?}", self),
+            Self::Unknown(id) => format!("Unknown(0x{:x})", id),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct PciDevice {
     pub vendor: u16,
     pub device: u16,
@@ -33,34 +65,26 @@ pub struct PciDevice {
 
 impl PciDevice {
     fn display(&self) -> String {
-        let mut vendor_id = None;
-        let mut class_id = None;
+        let mut vendor_id = PciVendor::Unknown(self.vendor);
+        let mut class_id = PciDeviceClass::Unknown(self.class);
 
         for id in PCI_VENDOR_ID::into_enum_iter() {
             if self.vendor == id as u16 {
-                vendor_id = Some(id);
+                vendor_id = PciVendor::Known(id);
             }
         }
 
         for id in PCI_DEVICE_CLASS::into_enum_iter() {
             if self.class == id as u8 {
-                class_id = Some(id);
+                class_id = PciDeviceClass::Known(id);
             }
         }
 
-        let vendor_fmt = match vendor_id {
-            Some(id) => format!("{:?}", id),
-            None => format!("Unidentified(0x{:x})", self.vendor),
-        };
-
-        let class_fmt = match class_id {
-            Some(id) => format!("{:?}", id),
-            None => format!("Unidentified(0x{:x})", self.class),
-        };
-
         format!(
             "PciDevice {{ vendor: {}, device: 0x{:x}, class: {} }}",
-            vendor_fmt, self.device, class_fmt
+            vendor_id.display(),
+            self.device,
+            class_id.display()
         )
     }
 }
@@ -83,48 +107,44 @@ pub fn read_u32(bus: u8, device: u8, function: u8, offset: u8) -> u32 {
     reply
 }
 
-pub fn read_pci_device(bus: u8, device: u8, function: u8) -> PciDevice {
+pub fn read_pci_device(bus: u8, device: u8, function: u8) -> Option<PciDevice> {
     let signature = read_u32(bus, device, function, 0);
+
+    if signature == 0xffffffff {
+        return None;
+    }
+
     let class_dword = read_u32(bus, device, function, 8);
 
     let vendor: u16 = (signature & 0xffff) as u16;
     let device: u16 = ((signature >> 16) & 0xffff) as u16;
     let class = ((class_dword >> 24) & 0xff) as u8;
 
-    PciDevice {
+    Some(PciDevice {
         vendor,
         device,
         class,
-    }
+    })
 }
 
 pub fn show() {
-    for bus_id in 0..1 {
-        for dev_id in 0..4 {
-            // let mut offset = 0;
-            // let val = read_dword(bus_id, dev_id, 0, offset);
-            // serial_println!("bus: {}  dev: {}  offset: {}  got: 0x{:x}", bus_id, dev_id, offset, val);
-
-            // offset = 4;
-            // let val = read_dword(bus_id, dev_id, 0, offset);
-            // serial_println!("bus: {}  dev: {}  offset: {}  got: 0x{:x}", bus_id, dev_id, offset, val);
-
-            // let offset = 8;
-            // let val = read_dword(bus_id, dev_id, 0, offset);
-            // serial_println!("bus: {}  dev: {}  offset: {}  got: 0x{:x}", bus_id, dev_id, offset, val);
-
-            // serial_println!();
-
-            let dev = read_pci_device(bus_id, dev_id, 0);
-            serial_println!(
-                "bus: {}  dev: {}  ::  vendor: 0x{:x}  device: 0x{:x}  class: 0x{:x}",
-                bus_id,
-                dev_id,
-                dev.vendor,
-                dev.device,
-                dev.class,
-            );
-            serial_println!("bus: {}  dev: {}  ::  {}", bus_id, dev_id, dev.display());
+    for bus_id in 0..255 {
+        for dev_id in 0..32 {
+            for fun_id in 0..8 {
+                let dev = read_pci_device(bus_id, dev_id, fun_id);
+                match dev {
+                    Some(dev) => {
+                        serial_println!(
+                            "{:02x}:{:02x}.{:x} {}",
+                            bus_id,
+                            dev_id,
+                            fun_id,
+                            dev.display()
+                        );
+                    }
+                    None => (),
+                }
+            }
         }
     }
 }
