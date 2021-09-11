@@ -61,24 +61,18 @@ impl PciDevice {
 
 impl PciDeviceBinding {
     pub fn display_line(&self) -> String {
-        let class = match self.device.class_name() {
-            Some(name) => name.to_owned(),
-            None => format!("0x{:x}", self.device.class),
-        };
-
-        let subclass = match self.device.subclass_name() {
-            Some(name) => name.to_owned(),
-            None => format!("0x{:x}", self.device.subclass),
-        };
-
-        let vendor = match self.device.vendor_name() {
-            Some(name) => name.to_owned(),
-            None => format!("vendor=0x{:x}", self.device.vendor),
-        };
+        let class = format!(
+            "{}",
+            self.name_or_hex(self.device.class_name(), self.device.class)
+        );
+        let device = format!(
+            "{}",
+            self.name_or_hex(self.device.device_name(), self.device.device)
+        );
 
         format!(
-            "{:02x}:{:02x}.{:x} {}/{}: {}",
-            self.address.bus, self.address.device, self.address.function, class, subclass, vendor,
+            "{:02x}:{:02x}.{:x} {}: {}",
+            self.address.bus, self.address.device, self.address.function, class, device,
         )
     }
 

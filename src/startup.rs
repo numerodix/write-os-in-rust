@@ -9,9 +9,9 @@ pub fn init_pci_devices() {
     let devices = detect_all_devices();
 
     for device in devices {
-        // let line = device.display_line();
-        // let line = format!("pci: {}", line);
-        // println_both(&line);
+        let line = device.display_line();
+        let line = format!("pci: {}", line);
+        println_both(&line);
 
         let block = device.display_block();
         for line in block.split('\n') {

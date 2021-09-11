@@ -1,5 +1,9 @@
 const DEVICE_MAP: [(u16, u16, &'static str); 7] = [
-    (0x10EC, 0x8139, "RTL-8100/8101L/8139 PCI Fast Ethernet Adapter"),
+    (
+        0x10EC,
+        0x8139,
+        "RTL-8100/8101L/8139 PCI Fast Ethernet Adapter",
+    ),
     (0x1022, 0x2000, "79c970 [PCnet32 LANCE]"),
     (0x8086, 0x1237, "440FX - 82441FX PMC [Natoma]"),
     (0x8086, 0x7000, "82371SB PIIX3 ISA [Natoma/Triton II]"),
@@ -17,4 +21,3 @@ pub fn get_device_name(vendor_id: u16, device_id: u16) -> Option<&'static str> {
 
     None
 }
-
