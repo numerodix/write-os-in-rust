@@ -3,6 +3,7 @@ use core::fmt::LowerHex;
 use alloc::borrow::ToOwned;
 use alloc::{format, string::String};
 
+use super::database::device_ids::get_device_name;
 use super::database::prog_if_ids::get_prog_if_name;
 use super::database::subclass_ids::get_subclass_name;
 use super::database::{class_ids::get_class_name, vendor_ids::get_vendor_name};
@@ -39,6 +40,10 @@ pub struct PciDeviceBinding {
 impl PciDevice {
     pub fn vendor_name(&self) -> Option<&'static str> {
         get_vendor_name(self.vendor)
+    }
+
+    pub fn device_name(&self) -> Option<&'static str> {
+        get_device_name(self.vendor, self.device)
     }
 
     pub fn class_name(&self) -> Option<&'static str> {
@@ -90,6 +95,17 @@ impl PciDeviceBinding {
             self.address.bus, self.address.device, self.address.function
         );
 
+        let signature = format!(
+            "signature: {} {}",
+            self.name_or_hex(None, self.device.vendor),
+            self.name_or_hex(None, self.device.device),
+        );
+
+        let device = format!(
+            "device: {}",
+            self.name_or_hex(self.device.device_name(), self.device.device)
+        );
+
         let vendor = format!(
             "vendor: {}",
             self.name_or_hex(self.device.vendor_name(), self.device.vendor)
@@ -120,9 +136,13 @@ impl PciDeviceBinding {
         let bar5 = format!("bar5: {}", self.name_or_hex(None, self.device.bar5));
 
         format!(
-            "{}{}\n{}{}\n{}{}\n{}{}\n{}{}\n{}{}\n{}{}\n{}{}\n{}{}\n{}{}\n{}{}\n",
+            "{}{}\n{}{}\n{}{}\n{}{}\n{}{}\n{}{}\n{}{}\n{}{}\n{}{}\n{}{}\n{}{}\n{}{}\n{}{}\n",
             prefix,
             vendor,
+            prefix,
+            device,
+            prefix,
+            signature,
             prefix,
             class,
             prefix,
