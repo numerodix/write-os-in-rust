@@ -5,6 +5,7 @@ const INTEL: &'static str = "Intel Corporation";
 const REALTEK: &'static str = "Realtek Semiconductor Co., Ltd.";
 const UBIQUITY: &'static str = "Ubiquiti Networks, Inc.";
 
+// https://pci-ids.ucw.cz/read/PC?restrict=
 const VENDOR_MAP: [(u16, &'static str); 6] = [
     (0x0777, UBIQUITY),
     (0x1002, AMD_ATI),

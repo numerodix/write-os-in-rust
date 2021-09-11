@@ -1,3 +1,4 @@
+// https://www.pcilookup.com/?ven=10ec&dev=8139&action=submit
 const DEVICE_MAP: [(u16, u16, &'static str); 7] = [
     (
         0x10EC,
