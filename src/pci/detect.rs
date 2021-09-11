@@ -33,17 +33,33 @@ pub fn detect_device(bus: u8, device: u8, function: u8) -> Option<PciDevice> {
     }
 
     let class_dword = read_u32(bus, device, function, 8);
+    let bar0 = read_u32(bus, device, function, 16);
+    let bar1 = read_u32(bus, device, function, 20);
+    let bar2 = read_u32(bus, device, function, 24);
+    let bar3 = read_u32(bus, device, function, 28);
+    let bar4 = read_u32(bus, device, function, 32);
+    let bar5 = read_u32(bus, device, function, 36);
 
     let vendor: u16 = (signature & 0xffff) as u16;
     let device: u16 = ((signature >> 16) & 0xffff) as u16;
     let class = ((class_dword >> 24) & 0xff) as u8;
     let subclass = ((class_dword >> 16) & 0xff) as u8;
+    let prog_if = ((class_dword >> 8) & 0xff) as u8;
+    let revision = (class_dword & 0xff) as u8;
 
     Some(PciDevice {
         vendor,
         device,
         class,
         subclass,
+        prog_if,
+        revision,
+        bar0,
+        bar1,
+        bar2,
+        bar3,
+        bar4,
+        bar5,
     })
 }
 

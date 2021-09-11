@@ -3,6 +3,7 @@ use core::fmt::LowerHex;
 use alloc::borrow::ToOwned;
 use alloc::{format, string::String};
 
+use super::database::prog_if_ids::get_prog_if_name;
 use super::database::subclass_ids::get_subclass_name;
 use super::database::{class_ids::get_class_name, vendor_ids::get_vendor_name};
 
@@ -12,6 +13,14 @@ pub struct PciDevice {
     pub device: u16,
     pub class: u8,
     pub subclass: u8,
+    pub prog_if: u8,
+    pub revision: u8,
+    pub bar0: u32,
+    pub bar1: u32,
+    pub bar2: u32,
+    pub bar3: u32,
+    pub bar4: u32,
+    pub bar5: u32,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -38,6 +47,10 @@ impl PciDevice {
 
     pub fn subclass_name(&self) -> Option<&'static str> {
         get_subclass_name(self.class, self.subclass)
+    }
+
+    pub fn prog_if_name(&self) -> Option<&'static str> {
+        get_prog_if_name(self.class, self.subclass, self.prog_if)
     }
 }
 
@@ -92,9 +105,44 @@ impl PciDeviceBinding {
             self.name_or_hex(self.device.subclass_name(), self.device.subclass)
         );
 
+        let prog_if = format!(
+            "prog_if: {}",
+            self.name_or_hex(self.device.prog_if_name(), self.device.prog_if)
+        );
+
+        let revision = format!("revision: {}", self.name_or_hex(None, self.device.revision));
+
+        let bar0 = format!("bar0: {}", self.name_or_hex(None, self.device.bar0));
+        let bar1 = format!("bar1: {}", self.name_or_hex(None, self.device.bar1));
+        let bar2 = format!("bar2: {}", self.name_or_hex(None, self.device.bar2));
+        let bar3 = format!("bar3: {}", self.name_or_hex(None, self.device.bar3));
+        let bar4 = format!("bar4: {}", self.name_or_hex(None, self.device.bar4));
+        let bar5 = format!("bar5: {}", self.name_or_hex(None, self.device.bar5));
+
         format!(
-            "{}{}\n{}{}\n{}{}\n",
-            prefix, vendor, prefix, class, prefix, subclass
+            "{}{}\n{}{}\n{}{}\n{}{}\n{}{}\n{}{}\n{}{}\n{}{}\n{}{}\n{}{}\n{}{}\n",
+            prefix,
+            vendor,
+            prefix,
+            class,
+            prefix,
+            subclass,
+            prefix,
+            prog_if,
+            prefix,
+            revision,
+            prefix,
+            bar0,
+            prefix,
+            bar1,
+            prefix,
+            bar2,
+            prefix,
+            bar3,
+            prefix,
+            bar4,
+            prefix,
+            bar5,
         )
     }
 }
