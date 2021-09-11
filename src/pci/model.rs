@@ -1,6 +1,7 @@
 use alloc::{format, string::String};
 
 use super::database::{class_ids::get_class_name, vendor_ids::get_vendor_name};
+use super::database::{subclass_ids::get_subclass_name};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct PciDevice {
@@ -31,6 +32,10 @@ impl PciDevice {
     pub fn class_name(&self) -> Option<String> {
         get_class_name(self.class)
     }
+
+    pub fn subclass_name(&self) -> Option<String> {
+        get_subclass_name(self.class, self.subclass)
+    }
 }
 
 impl PciDeviceBinding {
@@ -40,18 +45,23 @@ impl PciDeviceBinding {
             None => format!("0x{:x}", self.device.class),
         };
 
+        let subclass = match self.device.subclass_name() {
+            Some(name) => name,
+            None => format!("0x{:x}", self.device.subclass),
+        };
+
         let vendor = match self.device.vendor_name() {
             Some(name) => name,
             None => format!("vendor=0x{:x}", self.device.vendor),
         };
 
         format!(
-            "{:02x}:{:02x}.{:x} {}/0x{:x}: {}",
+            "{:02x}:{:02x}.{:x} {}/{}: {}",
             self.address.bus,
             self.address.device,
             self.address.function,
             class,
-            self.device.subclass,
+            subclass,
             vendor,
         )
     }
