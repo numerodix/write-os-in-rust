@@ -22,6 +22,8 @@ pub struct PciDevice {
     pub bar3: u32,
     pub bar4: u32,
     pub bar5: u32,
+    pub interrupt_pin: u8,
+    pub interrupt_line: u8,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -129,8 +131,17 @@ impl PciDeviceBinding {
         let bar4 = format!("bar4: {}", self.name_or_hex(None, self.device.bar4));
         let bar5 = format!("bar5: {}", self.name_or_hex(None, self.device.bar5));
 
+        let interrupt_pin = format!(
+            "interrupt_pin: {}",
+            self.name_or_hex(None, self.device.interrupt_pin)
+        );
+        let interrupt_line = format!(
+            "interrupt_line: {}",
+            self.name_or_hex(None, self.device.interrupt_line)
+        );
+
         format!(
-            "{}{}\n{}{}\n{}{}\n{}{}\n{}{}\n{}{}\n{}{}\n{}{}\n{}{}\n{}{}\n{}{}\n{}{}\n{}{}\n",
+            "{}{}\n{}{}\n{}{}\n{}{}\n{}{}\n{}{}\n{}{}\n{}{}\n{}{}\n{}{}\n{}{}\n{}{}\n{}{}\n{}{}\n{}{}\n",
             prefix,
             vendor,
             prefix,
@@ -157,6 +168,10 @@ impl PciDeviceBinding {
             bar4,
             prefix,
             bar5,
+            prefix,
+            interrupt_pin,
+            prefix,
+            interrupt_line,
         )
     }
 }
