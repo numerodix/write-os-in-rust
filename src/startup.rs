@@ -13,8 +13,8 @@ pub fn init_pci_devices() {
         let line = format!("pci: {}", line);
         println_both(&line);
 
-        let block = device.display_block();
-        for line in block.split('\n') {
+        let lines = device.display_block();
+        for line in lines {
             let line = format!("pci: {}\n", line);
             print_both(&line);
         }

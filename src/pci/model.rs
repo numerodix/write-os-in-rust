@@ -1,6 +1,8 @@
 use core::fmt::LowerHex;
 
 use alloc::borrow::ToOwned;
+use alloc::vec::Vec;
+use alloc::vec;
 use alloc::{format, string::String};
 
 use super::database::device_ids::get_device_name;
@@ -85,93 +87,87 @@ impl PciDeviceBinding {
         }
     }
 
-    pub fn display_block(&self) -> String {
+    pub fn display_block(&self) -> Vec<String> {
+        let mut lines = vec![];
+
         let prefix = format!(
             "{:02x}:{:02x}.{:x}  ",
             self.address.bus, self.address.device, self.address.function
         );
 
+        let vendor = format!(
+            "{}vendor: {}",
+            prefix,
+            self.name_or_hex(self.device.vendor_name(), self.device.vendor)
+        );
+        lines.push(vendor);
+
+        let device = format!(
+            "{}device: {}",
+            prefix,
+            self.name_or_hex(self.device.device_name(), self.device.device)
+        );
+        lines.push(device);
+
         let signature = format!(
-            "signature: {} {}",
+            "{}signature: {} {}",
+            prefix,
             self.name_or_hex(None, self.device.vendor),
             self.name_or_hex(None, self.device.device),
         );
-
-        let device = format!(
-            "device: {}",
-            self.name_or_hex(self.device.device_name(), self.device.device)
-        );
-
-        let vendor = format!(
-            "vendor: {}",
-            self.name_or_hex(self.device.vendor_name(), self.device.vendor)
-        );
+        lines.push(signature);
 
         let class = format!(
-            "class: {}",
+            "{}class: {}",
+            prefix,
             self.name_or_hex(self.device.class_name(), self.device.class)
         );
+        lines.push(class);
 
         let subclass = format!(
-            "subclass: {}",
+            "{}subclass: {}",
+            prefix,
             self.name_or_hex(self.device.subclass_name(), self.device.subclass)
         );
+        lines.push(subclass);
 
         let prog_if = format!(
-            "prog_if: {}",
+            "{}prog_if: {}",
+            prefix,
             self.name_or_hex(self.device.prog_if_name(), self.device.prog_if)
         );
+        lines.push(prog_if);
 
-        let revision = format!("revision: {}", self.name_or_hex(None, self.device.revision));
+        let revision = format!("{}revision: {}", prefix, self.name_or_hex(None, self.device.revision));
+        lines.push(revision);
 
-        let bar0 = format!("bar0: {}", self.name_or_hex(None, self.device.bar0));
-        let bar1 = format!("bar1: {}", self.name_or_hex(None, self.device.bar1));
-        let bar2 = format!("bar2: {}", self.name_or_hex(None, self.device.bar2));
-        let bar3 = format!("bar3: {}", self.name_or_hex(None, self.device.bar3));
-        let bar4 = format!("bar4: {}", self.name_or_hex(None, self.device.bar4));
-        let bar5 = format!("bar5: {}", self.name_or_hex(None, self.device.bar5));
+        let bar0 = format!("{}bar0: {}", prefix, self.name_or_hex(None, self.device.bar0));
+        let bar1 = format!("{}bar1: {}", prefix, self.name_or_hex(None, self.device.bar1));
+        let bar2 = format!("{}bar2: {}", prefix, self.name_or_hex(None, self.device.bar2));
+        let bar3 = format!("{}bar3: {}", prefix, self.name_or_hex(None, self.device.bar3));
+        let bar4 = format!("{}bar4: {}", prefix, self.name_or_hex(None, self.device.bar4));
+        let bar5 = format!("{}bar5: {}", prefix, self.name_or_hex(None, self.device.bar5));
+        lines.push(bar0);
+        lines.push(bar1);
+        lines.push(bar2);
+        lines.push(bar3);
+        lines.push(bar4);
+        lines.push(bar5);
 
         let interrupt_pin = format!(
-            "interrupt_pin: {}",
+            "{}interrupt_pin: {}",
+            prefix,
             self.name_or_hex(None, self.device.interrupt_pin)
         );
+        lines.push(interrupt_pin);
+
         let interrupt_line = format!(
-            "interrupt_line: {}",
+            "{}interrupt_line: {}",
+            prefix,
             self.name_or_hex(None, self.device.interrupt_line)
         );
+        lines.push(interrupt_line);
 
-        format!(
-            "{}{}\n{}{}\n{}{}\n{}{}\n{}{}\n{}{}\n{}{}\n{}{}\n{}{}\n{}{}\n{}{}\n{}{}\n{}{}\n{}{}\n{}{}\n",
-            prefix,
-            vendor,
-            prefix,
-            device,
-            prefix,
-            signature,
-            prefix,
-            class,
-            prefix,
-            subclass,
-            prefix,
-            prog_if,
-            prefix,
-            revision,
-            prefix,
-            bar0,
-            prefix,
-            bar1,
-            prefix,
-            bar2,
-            prefix,
-            bar3,
-            prefix,
-            bar4,
-            prefix,
-            bar5,
-            prefix,
-            interrupt_pin,
-            prefix,
-            interrupt_line,
-        )
+        lines
     }
 }
