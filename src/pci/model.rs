@@ -1,7 +1,7 @@
 use alloc::{format, string::String};
 
+use super::database::subclass_ids::get_subclass_name;
 use super::database::{class_ids::get_class_name, vendor_ids::get_vendor_name};
-use super::database::{subclass_ids::get_subclass_name};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct PciDevice {
@@ -57,12 +57,7 @@ impl PciDeviceBinding {
 
         format!(
             "{:02x}:{:02x}.{:x} {}/{}: {}",
-            self.address.bus,
-            self.address.device,
-            self.address.function,
-            class,
-            subclass,
-            vendor,
+            self.address.bus, self.address.device, self.address.function, class, subclass, vendor,
         )
     }
 }

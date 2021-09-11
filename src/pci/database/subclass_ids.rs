@@ -7,6 +7,7 @@ pub enum PCI_SUBCLASS_ID {
     // Unclassified
     VGACompatibleUnclassifiedDevice = 0x0000,
     NonVGACompatibleUnclassifiedDevice = 0x0001,
+
     // MassStorageController
     SCSIBusController = 0x0100,
     IDEController = 0x0101,
@@ -18,6 +19,7 @@ pub enum PCI_SUBCLASS_ID {
     SerialAttachedSCSIController = 0x0107,
     NonVolatileMemoryController = 0x0108,
     // - Other = 0x0180,
+
     // NetworkController
     EthernetController = 0x0200,
     TokenRingController = 0x0201,
@@ -29,6 +31,7 @@ pub enum PCI_SUBCLASS_ID {
     InfinibandController = 0x0207,
     FabricController = 0x0208,
     // - Other = 0x0280,
+
     // DisplayController
     VGACompatibleController = 0x0300,
     XGAController = 0x0301,
