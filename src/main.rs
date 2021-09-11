@@ -8,6 +8,8 @@ extern crate alloc;
 
 use blog_os::allocator::init_allocation_system;
 use blog_os::println;
+use blog_os::shortcuts::println_both;
+use blog_os::startup::init_pci_devices;
 use blog_os::task::keyboard;
 use blog_os::task::{executor::Executor, Task};
 use bootloader::{entry_point, BootInfo};
@@ -17,15 +19,14 @@ entry_point!(kernel_main);
 
 #[no_mangle]
 pub fn kernel_main(boot_info: &'static BootInfo) -> ! {
-    println!("Hello World{}", "!");
+    println_both("Kernel starting...");
     blog_os::init();
     init_allocation_system(boot_info);
+    init_pci_devices();
+    println_both("Kernel running.");
 
     #[cfg(test)]
     test_main();
-
-    use blog_os::devices::pci::show;
-    show();
 
     let mut executor = Executor::new();
     executor.spawn(Task::new(keyboard::print_keypresses()));

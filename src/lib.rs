@@ -17,11 +17,13 @@ use core::panic::PanicInfo;
 entry_point!(test_kernel_main);
 
 pub mod allocator;
-pub mod devices;
 pub mod gdt;
 pub mod interrupts;
 pub mod memory;
+pub mod pci;
 pub mod serial;
+pub mod shortcuts;
+pub mod startup;
 pub mod task;
 pub mod vga_buffer;
 
