@@ -21,6 +21,7 @@ pub mod gdt;
 pub mod interrupts;
 pub mod memory;
 pub mod pci;
+pub mod pcnet;
 pub mod serial;
 pub mod shortcuts;
 pub mod startup;
