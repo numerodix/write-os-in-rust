@@ -1,10 +1,11 @@
 use core::fmt::LowerHex;
 
 use alloc::borrow::ToOwned;
-use alloc::vec::Vec;
 use alloc::vec;
+use alloc::vec::Vec;
 use alloc::{format, string::String};
 
+use super::comms::{config_read, config_write};
 use super::database::device_ids::get_device_name;
 use super::database::prog_if_ids::get_prog_if_name;
 use super::database::subclass_ids::get_subclass_name;
@@ -14,10 +15,13 @@ use super::database::{class_ids::get_class_name, vendor_ids::get_vendor_name};
 pub struct PciDevice {
     pub vendor: u16,
     pub device: u16,
+    pub status: u16,
+    pub command: u16,
     pub class: u8,
     pub subclass: u8,
     pub prog_if: u8,
     pub revision: u8,
+    pub header_type: u8,
     pub bar0: u32,
     pub bar1: u32,
     pub bar2: u32,
@@ -64,6 +68,25 @@ impl PciDevice {
 }
 
 impl PciDeviceBinding {
+    pub fn config_read(&self, offset: u8) -> u32 {
+        config_read(
+            self.address.bus,
+            self.address.device,
+            self.address.function,
+            offset,
+        )
+    }
+
+    pub fn config_write(&self, offset: u8, value: u32) {
+        config_write(
+            self.address.bus,
+            self.address.device,
+            self.address.function,
+            offset,
+            value,
+        )
+    }
+
     pub fn display_line(&self) -> String {
         let class = format!(
             "{}",
@@ -80,7 +103,7 @@ impl PciDeviceBinding {
         )
     }
 
-    pub fn name_or_hex<N: LowerHex>(&self, name: Option<&'static str>, number: N) -> String {
+    fn name_or_hex<N: LowerHex>(&self, name: Option<&'static str>, number: N) -> String {
         match name {
             Some(name) => name.to_owned(),
             None => format!("0x{:x}", number),
@@ -138,15 +161,64 @@ impl PciDeviceBinding {
         );
         lines.push(prog_if);
 
-        let revision = format!("{}revision: {}", prefix, self.name_or_hex(None, self.device.revision));
+        let revision = format!(
+            "{}revision: {}",
+            prefix,
+            self.name_or_hex(None, self.device.revision)
+        );
         lines.push(revision);
 
-        let bar0 = format!("{}bar0: {}", prefix, self.name_or_hex(None, self.device.bar0));
-        let bar1 = format!("{}bar1: {}", prefix, self.name_or_hex(None, self.device.bar1));
-        let bar2 = format!("{}bar2: {}", prefix, self.name_or_hex(None, self.device.bar2));
-        let bar3 = format!("{}bar3: {}", prefix, self.name_or_hex(None, self.device.bar3));
-        let bar4 = format!("{}bar4: {}", prefix, self.name_or_hex(None, self.device.bar4));
-        let bar5 = format!("{}bar5: {}", prefix, self.name_or_hex(None, self.device.bar5));
+        let header_type = format!(
+            "{}header_type: {}",
+            prefix,
+            self.name_or_hex(None, self.device.header_type)
+        );
+        lines.push(header_type);
+
+        let status = format!(
+            "{}status: {}",
+            prefix,
+            self.name_or_hex(None, self.device.status)
+        );
+        lines.push(status);
+
+        let command = format!(
+            "{}command: {}",
+            prefix,
+            self.name_or_hex(None, self.device.command)
+        );
+        lines.push(command);
+
+        let bar0 = format!(
+            "{}bar0: {}",
+            prefix,
+            self.name_or_hex(None, self.device.bar0)
+        );
+        let bar1 = format!(
+            "{}bar1: {}",
+            prefix,
+            self.name_or_hex(None, self.device.bar1)
+        );
+        let bar2 = format!(
+            "{}bar2: {}",
+            prefix,
+            self.name_or_hex(None, self.device.bar2)
+        );
+        let bar3 = format!(
+            "{}bar3: {}",
+            prefix,
+            self.name_or_hex(None, self.device.bar3)
+        );
+        let bar4 = format!(
+            "{}bar4: {}",
+            prefix,
+            self.name_or_hex(None, self.device.bar4)
+        );
+        let bar5 = format!(
+            "{}bar5: {}",
+            prefix,
+            self.name_or_hex(None, self.device.bar5)
+        );
         lines.push(bar0);
         lines.push(bar1);
         lines.push(bar2);

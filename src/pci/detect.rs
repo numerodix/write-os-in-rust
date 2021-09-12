@@ -1,62 +1,50 @@
 use crate::pci::model::{PciDeviceAddress, PciDeviceBinding};
 
+use super::comms::config_read;
 use super::model::PciDevice;
 use alloc::vec;
 use alloc::vec::Vec;
-use x86_64::instructions::port::Port;
-
-pub const CONFIG_ADDRESS: u16 = 0xCF8;
-pub const CONFIG_DATA: u16 = 0xCFC;
-
-pub fn read_u32(bus: u8, device: u8, function: u8, offset: u8) -> u32 {
-    let mut output = Port::new(CONFIG_ADDRESS);
-    let mut input = Port::new(CONFIG_DATA);
-
-    let offset = offset & 0xFC;
-    let address: u32 = 0x80000000
-        | (u32::from(bus) << 16)
-        | (u32::from(device) << 11)
-        | (u32::from(function) << 8)
-        | u32::from(offset);
-
-    unsafe { output.write(address) };
-    let reply: u32 = unsafe { input.read() };
-
-    reply
-}
 
 pub fn detect_device(bus: u8, device: u8, function: u8) -> Option<PciDevice> {
-    let signature = read_u32(bus, device, function, 0);
+    let register_0 = config_read(bus, device, function, 0);
 
-    if signature == 0xffffffff {
+    if register_0 == 0xffffffff {
         return None;
     }
 
-    let class_dword = read_u32(bus, device, function, 8);
-    let bar0 = read_u32(bus, device, function, 16);
-    let bar1 = read_u32(bus, device, function, 20);
-    let bar2 = read_u32(bus, device, function, 24);
-    let bar3 = read_u32(bus, device, function, 28);
-    let bar4 = read_u32(bus, device, function, 32);
-    let bar5 = read_u32(bus, device, function, 36);
-    let interrupt_dword = read_u32(bus, device, function, 60);
+    let register_1 = config_read(bus, device, function, 4);
+    let register_2 = config_read(bus, device, function, 8);
+    let register_3 = config_read(bus, device, function, 12);
+    let bar0 = config_read(bus, device, function, 16);
+    let bar1 = config_read(bus, device, function, 20);
+    let bar2 = config_read(bus, device, function, 24);
+    let bar3 = config_read(bus, device, function, 28);
+    let bar4 = config_read(bus, device, function, 32);
+    let bar5 = config_read(bus, device, function, 36);
+    let register_15 = config_read(bus, device, function, 60);
 
-    let vendor: u16 = (signature & 0xffff) as u16;
-    let device: u16 = ((signature >> 16) & 0xffff) as u16;
-    let class = ((class_dword >> 24) & 0xff) as u8;
-    let subclass = ((class_dword >> 16) & 0xff) as u8;
-    let prog_if = ((class_dword >> 8) & 0xff) as u8;
-    let revision = (class_dword & 0xff) as u8;
-    let interrupt_pin = (interrupt_dword >> 16 & 0xff) as u8;
-    let interrupt_line = (interrupt_dword >> 24 & 0xff) as u8;
+    let vendor: u16 = (register_0 & 0xffff) as u16;
+    let device: u16 = ((register_0 >> 16) & 0xffff) as u16;
+    let command: u16 = (register_1 & 0xffff) as u16;
+    let status: u16 = ((register_1 >> 16) & 0xffff) as u16;
+    let class = ((register_2 >> 24) & 0xff) as u8;
+    let subclass = ((register_2 >> 16) & 0xff) as u8;
+    let prog_if = ((register_2 >> 8) & 0xff) as u8;
+    let revision = (register_2 & 0xff) as u8;
+    let header_type = ((register_3 >> 16) & 0xff) as u8;
+    let interrupt_pin = (register_15 >> 16 & 0xff) as u8;
+    let interrupt_line = (register_15 >> 24 & 0xff) as u8;
 
     Some(PciDevice {
         vendor,
         device,
+        command,
+        status,
         class,
         subclass,
         prog_if,
         revision,
+        header_type,
         bar0,
         bar1,
         bar2,

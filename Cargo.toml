@@ -36,6 +36,7 @@ features = ["spin_no_std"]
 [package.metadata.bootimage]
 run-args = [
     "-serial", "stdio",
+    "-net", "nic,model=pcnet",
 ]
 test-args = [
     "-device", "isa-debug-exit,iobase=0xf4,iosize=0x04",

@@ -22,7 +22,7 @@ pub fn kernel_main(boot_info: &'static BootInfo) -> ! {
     println_both("Kernel starting...");
     blog_os::init();
     init_allocation_system(boot_info);
-    init_pci_devices();
+    init_pci_devices(boot_info);
     println_both("Kernel running.");
 
     #[cfg(test)]
