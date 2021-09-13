@@ -66,7 +66,7 @@ impl PcNet {
         unsafe { self.reset32.as_mut().unwrap().read() };
         unsafe { reset_reg_16bit.read() };
 
-        // wait 1us
+        // TODO: wait 1us
 
         // Set 32bit mode
         unsafe { self.rdp32.as_mut().unwrap().write(0) };
