@@ -10,6 +10,7 @@ use super::database::device_ids::get_device_name;
 use super::database::prog_if_ids::get_prog_if_name;
 use super::database::subclass_ids::get_subclass_name;
 use super::database::{class_ids::get_class_name, vendor_ids::get_vendor_name};
+use super::detect::detect_device;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct PciDevice {
@@ -68,6 +69,14 @@ impl PciDevice {
 }
 
 impl PciDeviceBinding {
+    pub fn redetect(&mut self) {
+        if let Some(device) =
+            detect_device(self.address.bus, self.address.device, self.address.function)
+        {
+            self.device = device;
+        }
+    }
+
     pub fn config_read(&self, offset: u8) -> u32 {
         config_read(
             self.address.bus,

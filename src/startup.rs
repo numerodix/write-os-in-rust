@@ -4,6 +4,7 @@ use bootloader::BootInfo;
 use crate::pci::detect::detect_all_devices;
 use crate::pcnet::PcNet;
 use crate::serial_println;
+use crate::shortcuts::format_mac_address;
 use crate::shortcuts::print_both;
 use crate::shortcuts::println_both;
 
@@ -30,10 +31,14 @@ pub fn init_pci_devices(boot_info: &'static BootInfo) {
     }
 
     println_both("init pcnet card");
-    let binding = devices[devices.len() - 1];
-    let mut pcnet = PcNet::new(binding);
+    let mut binding = devices[devices.len() - 1];
+    let mut pcnet = PcNet::new(binding, boot_info.physical_memory_offset);
     pcnet.init();
 
+    let mac = pcnet.read_mac_address();
+    println_both(&format!("mac: {}", format_mac_address(mac)));
+
+    binding.redetect();
     let lines = binding.display_block();
     for line in lines {
         let line = format!("pci: {}\n", line);
