@@ -10,8 +10,12 @@ impl AddrTranslator {
     }
 
     pub fn translate(&self, addr: u64) -> u64 {
+        assert!(addr >= self.physical_memory_offset);
+
         let phys = addr - self.physical_memory_offset;
+
         assert!(phys < (1 << 31));
+
         phys
     }
 }

@@ -1,5 +1,7 @@
 use alloc::boxed::Box;
 
+use super::support::AddrTranslator;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(packed)]
 pub struct DescriptorEntry {
@@ -29,13 +31,6 @@ impl ReceiveBuffers {
             buffers: [PacketBuffer { buffer: [0; 1520] }; 32],
         }
     }
-
-    pub fn alloc() -> Box<Self> {
-        let bufs = Box::new(Self::new());
-        // let ptr = &*bufs as *const ReceiveBuffers;
-        // assert physical address fits in u32?
-        bufs
-    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -50,11 +45,21 @@ impl TransmitBuffers {
             buffers: [PacketBuffer { buffer: [0; 1520] }; 8],
         }
     }
+}
 
-    pub fn alloc() -> Box<Self> {
-        let bufs = Box::new(Self::new());
-        // let ptr = &*bufs as *const ReceiveBuffers;
-        // assert physical address fits in u32?
-        bufs
+pub struct BufferManager {
+    translator: AddrTranslator,
+
+    receive_buffers: Box<ReceiveBuffers>,
+    transmit_buffers: Box<TransmitBuffers>,
+}
+
+impl BufferManager {
+    pub fn new(physical_memory_offset: u64) -> Self {
+        Self {
+            translator: AddrTranslator::new(physical_memory_offset),
+            receive_buffers: Box::new(ReceiveBuffers::new()),
+            transmit_buffers: Box::new(TransmitBuffers::new()),
+        }
     }
 }
