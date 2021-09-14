@@ -1,19 +1,62 @@
+use core::{alloc::Layout, intrinsics::size_of};
+
 use x86_64::instructions::port::{Port, PortGeneric, ReadWriteAccess};
 
 use crate::pci::model::PciDeviceBinding;
 
+struct IoRegisters {
+    io_base: u16,
+
+    bcr32: Port<u32>,
+    csr32: Port<u32>,
+    rap32: Port<u32>,
+    rdp32: Port<u32>,
+    reset32: Port<u32>,
+}
+
+impl IoRegisters {
+    pub fn new(io_base: u16) -> Self {
+        IoRegisters {
+            io_base,
+            csr32: Port::new(io_base + 0x10),
+            rdp32: Port::new(io_base + 0x10),
+            rap32: Port::new(io_base + 0x14),
+            reset32: Port::new(io_base + 0x18),
+            bcr32: Port::new(io_base + 0x1c),
+        }
+    }
+
+    fn read_bcr32(&self, bcr_no: u32) -> u32 {
+        self.write_rap32(bcr_no);
+        unsafe { self.bcr32.read() }
+    }
+
+    fn write_bcr32(&self, bcr_no: u32, value: u32) {
+        self.write_rap32(bcr_no);
+        unsafe { self.bcr32.write(value) };
+    }
+
+    fn read_csr32(&self, csr_no: u32) -> u32 {
+        self.write_rap32(csr_no);
+        unsafe { self.csr32.read() }
+    }
+
+    fn write_csr32(&self, csr_no: u32, value: u32) {
+        self.write_rap32(csr_no);
+        unsafe { self.csr32.write(value) };
+    }
+
+    fn write_rap32(&self, value: u32) {
+        unsafe { self.rap32.write(value) };
+    }
+}
+
 pub struct PcNet {
-    pub binding: PciDeviceBinding,
-    pub io_base: u16,
+    binding: PciDeviceBinding,
+    io_registers: IoRegisters,
 
-    bcr32: Option<Port<u32>>,
-    csr32: Option<Port<u32>>,
-    rap32: Option<Port<u32>>,
-    rdp32: Option<Port<u32>>,
-    reset32: Option<Port<u32>>,
-
-    rde: Option<*mut DE>,
-    tde: Option<*mut DE>,
+    rde: Option<*mut DescriptorEntry>,
+    tde: Option<*mut DescriptorEntry>,
 
     rx_buffers: Option<*mut u64>,
     tx_buffers: Option<*mut u64>,
@@ -26,26 +69,47 @@ pub struct PcNet {
 }
 
 #[repr(packed)]
-struct DE {
+struct DescriptorEntry {
     buffer_address: u32, // 4 bytes
     count: u16,          // 2 bytes
-    unused1: u16,        // 2 bytes
+    unused1: u8,         // 1 byte
     ownership: u8,       // 1 byte
-    unused2: u8,         // 1 byte
+    unused2: u32,        // 4 bytes
     unused3: u32,        // 4 bytes
-    unused4: u16,        // 2 bytes
 }
 
+#[repr(packed)]
+struct PacketBuffer {
+    buffer: [u8; 1520],
+}
+
+#[repr(packed)]
+struct ReceiveBuffers {
+    buffers: [PacketBuffer; 32],
+}
+
+#[repr(packed)]
+struct TransmitBuffers {
+    buffers: [PacketBuffer; 8],
+}
+
+
 impl PcNet {
-    pub fn new(binding: PciDeviceBinding, phyical_memory_offset: u64) -> Self {
-        PcNet {
+    pub fn initialize(binding: PciDeviceBinding, phyical_memory_offset: u64) -> Self {
+        // Enable io ports and bus mastering of the card
+        let offset = 4;
+        let mut conf = binding.config_read(offset);
+        conf &= 0xffff0000; // clear command register, preserve status register
+        conf |= 0x5; // set bits 0 and 2
+        binding.config_write(offset, conf);
+
+        // Populate io_base
+        let io_base = (binding.device.bar0 & 0xfffffffc) as u16;
+        let io_registers = IoRegisters::new(io_base);
+
+        let mut instance = PcNet {
             binding,
-            io_base: 0,
-            bcr32: None,
-            csr32: None,
-            rap32: None,
-            rdp32: None,
-            reset32: None,
+            io_registers,
             rde: None,
             tde: None,
             rx_buffers: None,
@@ -54,7 +118,8 @@ impl PcNet {
             tx_buffer_count: 0,
             buffer_size: 0,
             physical_memory_offset: phyical_memory_offset,
-        }
+        };
+        instance
     }
 
     fn sleep(&self, cycles: u64) {
@@ -62,30 +127,6 @@ impl PcNet {
         for i in 0..cycles {
             sum += i;
         }
-    }
-
-    fn read_bcr32(&mut self, bcr_no: u32) -> u32 {
-        self.write_rap32(bcr_no);
-        unsafe { self.bcr32.as_mut().unwrap().read() }
-    }
-
-    fn write_bcr32(&mut self, bcr_no: u32, value: u32) {
-        self.write_rap32(bcr_no);
-        unsafe { self.bcr32.as_mut().unwrap().write(value) };
-    }
-
-    fn read_csr32(&mut self, csr_no: u32) -> u32 {
-        self.write_rap32(csr_no);
-        unsafe { self.csr32.as_mut().unwrap().read() }
-    }
-
-    fn write_csr32(&mut self, csr_no: u32, value: u32) {
-        self.write_rap32(csr_no);
-        unsafe { self.csr32.as_mut().unwrap().write(value) };
-    }
-
-    fn write_rap32(&mut self, value: u32) {
-        unsafe { self.rap32.as_mut().unwrap().write(value) };
     }
 
     pub fn read_mac_address(&self) -> [u8; 6] {
