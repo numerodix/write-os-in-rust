@@ -7,6 +7,7 @@ use crate::pci::model::PciDeviceBinding;
 use super::buffers::DescriptorEntry;
 use super::buffers::ReceiveBuffers;
 use super::ports::IoPorts;
+use super::support::AddrTranslator;
 
 pub struct PcNet {
     binding: PciDeviceBinding,
@@ -21,12 +22,12 @@ pub struct PcNet {
     rx_buffer_count: u16,
     tx_buffer_count: u16,
     buffer_size: u16,
-
-    physical_memory_offset: u64,
 }
 
 impl PcNet {
-    pub fn initialize(binding: PciDeviceBinding, phyical_memory_offset: u64) -> Self {
+    pub fn initialize(binding: PciDeviceBinding, physical_memory_offset: u64) -> Self {
+        let trans = AddrTranslator::new(physical_memory_offset);
+
         // Enable io ports and bus mastering of the card
         let offset = 4;
         let mut conf = binding.config_read(offset);
@@ -76,7 +77,6 @@ impl PcNet {
             rx_buffer_count: 0,
             tx_buffer_count: 0,
             buffer_size: 0,
-            physical_memory_offset: phyical_memory_offset,
         }
     }
 
