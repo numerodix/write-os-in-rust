@@ -1,4 +1,8 @@
+use core::mem::size_of;
+
 use alloc::boxed::Box;
+
+use crate::serial_println;
 
 use super::support::AddrTranslator;
 
@@ -21,31 +25,24 @@ pub struct PacketBuffer {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(packed)]
-pub struct ReceiveBuffers {
-    buffers: [PacketBuffer; 32],
+pub struct PacketRingBuffer<const S: usize> {
+    buffers: [PacketBuffer; S],
 }
 
-impl ReceiveBuffers {
+impl<const S: usize> PacketRingBuffer<S> {
     fn new() -> Self {
         Self {
-            buffers: [PacketBuffer { buffer: [0; 1520] }; 32],
+            buffers: [PacketBuffer { buffer: [0; 1520] }; S],
         }
+    }
+
+    pub fn len(&self) -> usize {
+        S
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[repr(packed)]
-pub struct TransmitBuffers {
-    buffers: [PacketBuffer; 8],
-}
-
-impl TransmitBuffers {
-    fn new() -> Self {
-        Self {
-            buffers: [PacketBuffer { buffer: [0; 1520] }; 8],
-        }
-    }
-}
+type ReceiveBuffers = PacketRingBuffer<32>;
+type TransmitBuffers = PacketRingBuffer<8>;
 
 pub struct BufferManager {
     translator: AddrTranslator,
@@ -61,5 +58,23 @@ impl BufferManager {
             receive_buffers: Box::new(ReceiveBuffers::new()),
             transmit_buffers: Box::new(TransmitBuffers::new()),
         }
+    }
+
+    pub fn address_of_rx_buffer(&self, idx: usize) -> u32 {
+        assert!(idx < self.receive_buffers.len());
+
+        let base_addr = &*self.receive_buffers as *const ReceiveBuffers as u64;
+        let addr = base_addr + (idx * size_of::<PacketBuffer>()) as u64;
+
+        self.translator.translate(addr)
+    }
+
+    pub fn address_of_tx_buffer(&self, idx: usize) -> u32 {
+        assert!(idx < self.receive_buffers.len());
+
+        let base_addr = &*self.receive_buffers as *const ReceiveBuffers as u64;
+        let addr = base_addr + (idx * size_of::<PacketBuffer>()) as u64;
+
+        self.translator.translate(addr)
     }
 }

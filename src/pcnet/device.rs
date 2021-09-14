@@ -1,14 +1,10 @@
-use crate::pcnet::buffers::TransmitBuffers;
 use crate::serial_println;
-use alloc::boxed::Box;
 
 use crate::pci::model::PciDeviceBinding;
 
 use super::buffers::BufferManager;
 use super::buffers::DescriptorEntry;
-use super::buffers::ReceiveBuffers;
 use super::ports::IoPorts;
-use super::support::AddrTranslator;
 
 pub struct PcNet {
     binding: PciDeviceBinding,
@@ -17,9 +13,6 @@ pub struct PcNet {
 
     rde: Option<*mut DescriptorEntry>,
     tde: Option<*mut DescriptorEntry>,
-
-    rx_buffers: Box<ReceiveBuffers>,
-    tx_buffers: Box<TransmitBuffers>,
 
     rx_buffer_count: u16,
     tx_buffer_count: u16,
@@ -64,10 +57,8 @@ impl PcNet {
         bcr2 |= 0x2;
         io_ports.write_bcr32(bcr_no, bcr2);
 
-        let rx_buffers = ReceiveBuffers::alloc();
-        let tx_buffers = TransmitBuffers::alloc();
-        // serial_println!("rx_bufs: {:?}", &*rx_buffers as *const ReceiveBuffers);
-        // serial_println!("tx_bufs: {:?}", &*tx_buffers as *const TransmitBuffers);
+        serial_println!("rx_bufs[31]: {:?}", buffer_manager.address_of_rx_buffer(31));
+        serial_println!("tx_bufs[7]: {:?}", buffer_manager.address_of_tx_buffer(7));
 
         PcNet {
             binding,
@@ -75,8 +66,6 @@ impl PcNet {
             buffer_manager,
             rde: None,
             tde: None,
-            rx_buffers,
-            tx_buffers,
             rx_buffer_count: 0,
             tx_buffer_count: 0,
             buffer_size: 0,
