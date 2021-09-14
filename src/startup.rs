@@ -32,8 +32,7 @@ pub fn init_pci_devices(boot_info: &'static BootInfo) {
 
     println_both("init pcnet card");
     let mut binding = devices[devices.len() - 1];
-    let mut pcnet = PcNet::new(binding, boot_info.physical_memory_offset);
-    pcnet.init();
+    let pcnet = PcNet::initialize(binding, boot_info.physical_memory_offset);
 
     let mac = pcnet.read_mac_address();
     println_both(&format!("mac: {}", format_mac_address(mac)));
