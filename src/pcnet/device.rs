@@ -1,6 +1,6 @@
-use crate::{allocator::ALLOCATOR, serial_println};
-use alloc::alloc::GlobalAlloc;
-use core::{alloc::Layout, mem};
+use crate::pcnet::buffers::TransmitBuffers;
+use crate::serial_println;
+use alloc::boxed::Box;
 
 use crate::pci::model::PciDeviceBinding;
 
@@ -15,8 +15,8 @@ pub struct PcNet {
     rde: Option<*mut DescriptorEntry>,
     tde: Option<*mut DescriptorEntry>,
 
-    rx_buffers: Option<*mut u64>,
-    tx_buffers: Option<*mut u64>,
+    rx_buffers: Box<ReceiveBuffers>,
+    tx_buffers: Box<TransmitBuffers>,
 
     rx_buffer_count: u16,
     tx_buffer_count: u16,
@@ -61,18 +61,18 @@ impl PcNet {
         bcr2 |= 0x2;
         io_ports.write_bcr32(bcr_no, bcr2);
 
-        let size = ReceiveBuffers::size();
-        let layout = Layout::from_size_align(size, 32).unwrap();
-        let ptr = unsafe { ALLOCATOR.alloc(layout) };
-        serial_println!("add: {:?}", ptr);
+        let rx_buffers = ReceiveBuffers::alloc();
+        let tx_buffers = TransmitBuffers::alloc();
+        // serial_println!("rx_bufs: {:?}", &*rx_buffers as *const ReceiveBuffers);
+        // serial_println!("tx_bufs: {:?}", &*tx_buffers as *const TransmitBuffers);
 
         PcNet {
             binding,
             io_ports,
             rde: None,
             tde: None,
-            rx_buffers: None,
-            tx_buffers: None,
+            rx_buffers,
+            tx_buffers,
             rx_buffer_count: 0,
             tx_buffer_count: 0,
             buffer_size: 0,
