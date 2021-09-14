@@ -1,11 +1,14 @@
 use core::{alloc::Layout, intrinsics::size_of};
 
-use x86_64::instructions::port::{Port, PortGeneric, ReadWriteAccess};
+use x86_64::instructions::port::Port;
 
 use crate::pci::model::PciDeviceBinding;
 
-struct IoRegisters {
+struct IoPorts {
     io_base: u16,
+
+    port0: Port<u32>,
+    port1: Port<u32>,
 
     bcr32: Port<u32>,
     csr32: Port<u32>,
@@ -16,10 +19,13 @@ struct IoRegisters {
     reset16: Port<u16>,
 }
 
-impl IoRegisters {
+impl IoPorts {
     pub fn new(io_base: u16) -> Self {
-        IoRegisters {
+        IoPorts {
             io_base,
+
+            port0: Port::new(io_base),
+            port1: Port::new(io_base + 0x04),
 
             csr32: Port::new(io_base + 0x10),
             rdp32: Port::new(io_base + 0x10),
@@ -29,6 +35,14 @@ impl IoRegisters {
 
             reset16: Port::new(io_base + 0x14),
         }
+    }
+
+    fn read_port0(&mut self) -> u32 {
+        unsafe { self.port0.read() }
+    }
+
+    fn read_port1(&mut self) -> u32 {
+        unsafe { self.port1.read() }
     }
 
     fn read_reset16(&mut self) -> u16 {
@@ -70,7 +84,7 @@ impl IoRegisters {
 
 pub struct PcNet {
     binding: PciDeviceBinding,
-    io_registers: IoRegisters,
+    io_ports: IoPorts,
 
     rde: Option<*mut DescriptorEntry>,
     tde: Option<*mut DescriptorEntry>,
@@ -110,7 +124,6 @@ struct TransmitBuffers {
     buffers: [PacketBuffer; 8],
 }
 
-
 impl PcNet {
     pub fn initialize(binding: PciDeviceBinding, phyical_memory_offset: u64) -> Self {
         // Enable io ports and bus mastering of the card
@@ -122,34 +135,34 @@ impl PcNet {
 
         // Populate io_base
         let io_base = (binding.device.bar0 & 0xfffffffc) as u16;
-        let mut io_registers = IoRegisters::new(io_base);
+        let mut io_ports = IoPorts::new(io_base);
 
         // Reset the card
-        io_registers.read_reset32();
-        io_registers.read_reset16();
+        io_ports.read_reset32();
+        io_ports.read_reset16();
 
         // wait 1us (sort of)
         Self::sleep(1 << 20);
 
         // Set 32bit mode
-        io_registers.write_rdp32(0);
+        io_ports.write_rdp32(0);
 
         // Set SWSTYLE to 2
         let csr_no = 58;
-        let mut csr58 = io_registers.read_csr32(csr_no);
+        let mut csr58 = io_ports.read_csr32(csr_no);
         csr58 &= 0xff00;
         csr58 |= 2;
-        io_registers.write_csr32(csr_no, csr58);
+        io_ports.write_csr32(csr_no, csr58);
 
         // Set ASEL bit
         let bcr_no = 2;
-        let mut bcr2 = io_registers.read_bcr32(bcr_no);
+        let mut bcr2 = io_ports.read_bcr32(bcr_no);
         bcr2 |= 0x2;
-        io_registers.write_bcr32(bcr_no, bcr2);
+        io_ports.write_bcr32(bcr_no, bcr2);
 
         PcNet {
             binding,
-            io_registers,
+            io_ports,
             rde: None,
             tde: None,
             rx_buffers: None,
@@ -168,12 +181,9 @@ impl PcNet {
         }
     }
 
-    pub fn read_mac_address(&self) -> [u8; 6] {
-        let mut fst_port = Port::new(self.io_registers.io_base);
-        let mut snd_port = Port::new(self.io_registers.io_base + 0x04);
-
-        let fst_byte: u32 = unsafe { fst_port.read() };
-        let snd_byte: u32 = unsafe { snd_port.read() };
+    pub fn read_mac_address(&mut self) -> [u8; 6] {
+        let fst_byte: u32 = self.io_ports.read_port0();
+        let snd_byte: u32 = self.io_ports.read_port1();
 
         let mut mac = [0u8; 6];
         mac[0] = (fst_byte & 0xff) as u8;
@@ -184,19 +194,5 @@ impl PcNet {
         mac[5] = ((snd_byte >> 8) & 0xff) as u8;
 
         mac
-    }
-
-    pub fn init(&mut self) {
-        // // Set up ring buffers
-        // self.rx_buffer_count = 32;
-        // self.tx_buffer_count = 8;
-        // self.buffer_size = 1520;
-
-        // let de_layout = Layout::from_size_align(16, 16).unwrap();
-        // let mut rde_ptr = unsafe { ALLOCATOR.alloc(de_layout) } as *mut DE;
-
-        // unsafe {
-        //     (*rde_ptr).buffer_address = 1;
-        // }
     }
 }
