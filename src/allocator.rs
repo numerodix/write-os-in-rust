@@ -1,4 +1,5 @@
-use crate::memory::{self, BootInfoFrameAllocator};
+use crate::memory;
+use crate::memory::BootInfoFrameAllocator;
 use bootloader::BootInfo;
 use fixed_size_block::FixedSizeBlockAllocator;
 use x86_64::{
