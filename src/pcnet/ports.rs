@@ -76,4 +76,19 @@ impl IoPorts {
     pub fn write_rdp32(&mut self, value: u32) {
         unsafe { self.rdp32.write(value) };
     }
+
+    pub fn read_mac_address(&mut self) -> [u8; 6] {
+        let fst_byte: u32 = self.read_port0();
+        let snd_byte: u32 = self.read_port1();
+
+        let mut mac = [0u8; 6];
+        mac[0] = (fst_byte & 0xff) as u8;
+        mac[1] = ((fst_byte >> 8) & 0xff) as u8;
+        mac[2] = ((fst_byte >> 16) & 0xff) as u8;
+        mac[3] = ((fst_byte >> 24) & 0xff) as u8;
+        mac[4] = (snd_byte & 0xff) as u8;
+        mac[5] = ((snd_byte >> 8) & 0xff) as u8;
+
+        mac
+    }
 }

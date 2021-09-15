@@ -1,9 +1,9 @@
-use crate::println_all;
+use crate::{print_all, println_all};
 
 use crate::pci::model::PciDeviceBinding;
 use crate::shortcuts::sleep;
 
-use super::buffers::BufferManager;
+use super::buffers::{BufferManager, NUM_RECEIVE_BUFFERS};
 use super::ports::IoPorts;
 
 pub struct PcNet {
@@ -38,7 +38,7 @@ impl PcNet {
         io_ports.write_rdp32(0);
 
         // Set SWSTYLE to 2
-        let csr_no = 58;
+        let mut csr_no = 58;
         let mut csr58 = io_ports.read_csr32(csr_no);
         csr58 &= 0xff00;
         csr58 |= 2;
@@ -51,7 +51,34 @@ impl PcNet {
         io_ports.write_bcr32(bcr_no, bcr2);
 
         // Set up buffers
-        buffer_manager.initialize();
+        let mac = io_ports.read_mac_address();
+        buffer_manager.initialize(mac);
+
+        // Point the card to the init struct
+        let is_addr = buffer_manager.address_of_init_struct();
+        let low = is_addr & 0xffff;
+        let high = (is_addr >> 16) & 0xffff;
+        io_ports.write_csr32(1, low);
+        io_ports.write_csr32(2, high);
+
+        // Tell the card to initialize
+        csr_no = 0;
+        let mut csr0 = io_ports.read_csr32(csr_no);
+        csr0 |= 0x1;
+        io_ports.write_csr32(csr_no, csr0);
+
+        // Poll waiting for card to initialize
+        loop {
+            csr0 = io_ports.read_csr32(csr_no);
+            if csr0 & 0x80 > 0 {
+                break;
+            }
+        }
+
+        // Start the card
+        csr0 = io_ports.read_csr32(csr_no);
+        csr0 &= 0b010;
+        io_ports.write_csr32(csr_no, csr0);
 
         PcNet {
             binding,
@@ -61,18 +88,24 @@ impl PcNet {
     }
 
     pub fn read_mac_address(&mut self) -> [u8; 6] {
-        let fst_byte: u32 = self.io_ports.read_port0();
-        let snd_byte: u32 = self.io_ports.read_port1();
+        self.io_ports.read_mac_address()
+    }
 
-        let mut mac = [0u8; 6];
-        mac[0] = (fst_byte & 0xff) as u8;
-        mac[1] = ((fst_byte >> 8) & 0xff) as u8;
-        mac[2] = ((fst_byte >> 16) & 0xff) as u8;
-        mac[3] = ((fst_byte >> 24) & 0xff) as u8;
-        mac[4] = (snd_byte & 0xff) as u8;
-        mac[5] = ((snd_byte >> 8) & 0xff) as u8;
+    pub fn poll_recv_packets(&self) {
+        let bufman = &self.buffer_manager;
 
-        mac
+        loop {
+            for idx in 0..NUM_RECEIVE_BUFFERS {
+                let mut desc = bufman.receive_descriptors.entries[idx];
+
+                if desc.driver_has_ownership() {
+                    let buffer = bufman.receive_buffers.buffers[idx];
+                    print_all!("packet: {:?}", buffer.buffer);
+
+                    desc.set_card_ownership();
+                }
+            }
+        }
     }
 
     pub fn dump_phys_addresses(&self) {

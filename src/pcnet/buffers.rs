@@ -4,25 +4,47 @@ use alloc::boxed::Box;
 
 use super::support::AddrTranslator;
 
-const NUM_RECEIVE_BUFFERS: usize = 32;
-const NUM_TRANSMIT_BUFFERS: usize = 8;
-const BUFFER_SIZE: usize = 1520;
+pub const NUM_RECEIVE_BUFFERS: usize = 32;
+pub const NUM_TRANSMIT_BUFFERS: usize = 8;
+pub const BUFFER_SIZE: usize = 1520;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(packed)]
 pub struct DescriptorEntry {
     buffer_address: u32, // 4 bytes
-    count: u16,          // 2 bytes
+    size: u16,           // 2 bytes
     unused1: u8,         // 1 byte
     ownership: u8,       // 1 byte
     unused2: u32,        // 4 bytes
     unused3: u32,        // 4 bytes
 }
 
+impl DescriptorEntry {
+    fn set_size(&mut self, size: usize) {
+        assert!(size <= 1 << 16);
+
+        let mut sz = !(size as u16);
+        sz &= 0x0fff;
+        sz |= 0xf000;
+        self.size = sz;
+    }
+
+    pub fn driver_has_ownership(&mut self) -> bool {
+        if self.ownership & 0x80 > 0 {
+            return true;
+        }
+        return false;
+    }
+
+    pub fn set_card_ownership(&mut self) {
+        self.ownership = 0x80;
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(packed)]
 pub struct DescriptorRingBuffer<const S: usize> {
-    entries: [DescriptorEntry; S],
+    pub entries: [DescriptorEntry; S],
 }
 
 impl<const S: usize> DescriptorRingBuffer<S> {
@@ -30,7 +52,7 @@ impl<const S: usize> DescriptorRingBuffer<S> {
         Self {
             entries: [DescriptorEntry {
                 buffer_address: 0,
-                count: 0,
+                size: 0,
                 unused1: 0,
                 ownership: 0,
                 unused2: 0,
@@ -50,13 +72,13 @@ type TransmitDescriptors = DescriptorRingBuffer<NUM_TRANSMIT_BUFFERS>;
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(packed)]
 pub struct PacketBuffer {
-    buffer: [u8; BUFFER_SIZE],
+    pub buffer: [u8; BUFFER_SIZE],
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(packed)]
 pub struct PacketRingBuffer<const S: usize> {
-    buffers: [PacketBuffer; S],
+    pub buffers: [PacketBuffer; S],
 }
 
 impl<const S: usize> PacketRingBuffer<S> {
@@ -123,16 +145,26 @@ impl InitStruct {
             tx_desc_phys_addr: 0,
         }
     }
+
+    fn set_rlen(&mut self, rlen: u16) {
+        // NUM_RECEIVE_BUFFERS: 32 ; 2^5 = 32
+        let byte: u8 = 5 << 4;
+    }
+
+    fn set_tlen(&mut self, tlen: u16) {
+        // NUM_TRANSMIT_BUFFERS: 8 ; 2^3 = 8
+        let byte: u8 = 3 << 4;
+    }
 }
 
 pub struct BufferManager {
     translator: AddrTranslator,
 
-    receive_buffers: Box<ReceiveBuffers>,
-    transmit_buffers: Box<TransmitBuffers>,
+    pub receive_buffers: Box<ReceiveBuffers>,
+    pub transmit_buffers: Box<TransmitBuffers>,
 
-    receive_descriptors: Box<ReceiveDescriptors>,
-    transmit_descriptors: Box<TransmitDescriptors>,
+    pub receive_descriptors: Box<ReceiveDescriptors>,
+    pub transmit_descriptors: Box<TransmitDescriptors>,
 
     init_struct: Box<InitStruct>,
 }
@@ -194,11 +226,36 @@ impl BufferManager {
         self.translator.translate(addr)
     }
 
-    pub fn initialize(&mut self) {
+    pub fn initialize(&mut self, mac: [u8; 6]) {
+        // Initialize desciptors
         for idx in 0..NUM_RECEIVE_BUFFERS {
             let mut desc = self.receive_descriptors.entries[idx];
-            let addr = self.address_of_rx_buffer(idx);
-            desc.buffer_address = addr;
+            let buf_addr = self.address_of_rx_buffer(idx);
+
+            desc.buffer_address = buf_addr;
+            desc.set_size(BUFFER_SIZE);
+            desc.set_card_ownership();
         }
+
+        for idx in 0..NUM_TRANSMIT_BUFFERS {
+            let mut desc = self.transmit_descriptors.entries[idx];
+            let buf_addr = self.address_of_tx_buffer(idx);
+
+            desc.buffer_address = buf_addr;
+            desc.set_size(BUFFER_SIZE);
+        }
+
+        // Initialize init struct
+        self.init_struct.mode = 0x0;
+        self.init_struct.set_rlen(NUM_RECEIVE_BUFFERS as u16);
+        self.init_struct.set_tlen(NUM_TRANSMIT_BUFFERS as u16);
+        self.init_struct.mac0 = mac[0];
+        self.init_struct.mac1 = mac[1];
+        self.init_struct.mac2 = mac[2];
+        self.init_struct.mac3 = mac[3];
+        self.init_struct.mac4 = mac[4];
+        self.init_struct.mac5 = mac[5];
+        self.init_struct.rx_desc_phys_addr = self.address_of_rx_descriptor(0);
+        self.init_struct.tx_desc_phys_addr = self.address_of_tx_descriptor(0);
     }
 }
