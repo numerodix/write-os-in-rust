@@ -1,3 +1,4 @@
+use crate::println_all;
 use crate::serial_println;
 
 use crate::pci::model::PciDeviceBinding;
@@ -57,8 +58,11 @@ impl PcNet {
         bcr2 |= 0x2;
         io_ports.write_bcr32(bcr_no, bcr2);
 
-        serial_println!("rx_bufs[31]: {:?}", buffer_manager.address_of_rx_buffer(31));
-        serial_println!("tx_bufs[7]: {:?}", buffer_manager.address_of_tx_buffer(7));
+        println_all!(
+            "rx_bufs[31]: 0x{:x}",
+            buffer_manager.address_of_rx_buffer(31)
+        );
+        println_all!("tx_bufs[7]: 0x{:x}", buffer_manager.address_of_tx_buffer(7));
 
         PcNet {
             binding,

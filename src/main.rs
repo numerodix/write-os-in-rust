@@ -7,11 +7,10 @@
 extern crate alloc;
 
 use blog_os::allocator::init_allocation_system;
-use blog_os::println;
-use blog_os::shortcuts::println_both;
 use blog_os::startup::init_pci_devices;
 use blog_os::task::keyboard;
 use blog_os::task::{executor::Executor, Task};
+use blog_os::{println, println_all};
 use bootloader::{entry_point, BootInfo};
 use core::panic::PanicInfo;
 
@@ -19,11 +18,11 @@ entry_point!(kernel_main);
 
 #[no_mangle]
 pub fn kernel_main(boot_info: &'static BootInfo) -> ! {
-    println_both("Kernel starting...");
+    println_all!("Kernel starting...");
     blog_os::init();
     init_allocation_system(boot_info);
     init_pci_devices(boot_info);
-    println_both("Kernel running.");
+    println_all!("Kernel running.");
 
     #[cfg(test)]
     test_main();

@@ -1,15 +1,19 @@
 use alloc::{format, string::String};
 
-use crate::{print, println, serial_print, serial_println};
-
-pub fn print_both(msg: &str) {
-    print!("{}", msg);
-    serial_print!("{}", msg);
+#[macro_export]
+macro_rules! print_all {
+    ($($arg:tt)*) => {
+        $crate::vga_buffer::_print(format_args!($($arg)*));
+        $crate::serial::_print(format_args!($($arg)*));
+    };
 }
 
-pub fn println_both(msg: &str) {
-    println!("{}", msg);
-    serial_println!("{}", msg);
+#[macro_export]
+macro_rules! println_all {
+    () => ($crate::print_all!("\n"));
+    ($fmt:expr) => ($crate::print_all!(concat!($fmt, "\n")));
+    ($fmt:expr, $($arg:tt)*) => ($crate::print_all!(
+        concat!($fmt, "\n"), $($arg)*));
 }
 
 pub fn format_mac_address(mac: [u8; 6]) -> String {

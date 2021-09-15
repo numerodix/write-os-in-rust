@@ -2,8 +2,6 @@ use core::mem::size_of;
 
 use alloc::boxed::Box;
 
-use crate::serial_println;
-
 use super::support::AddrTranslator;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

@@ -1,5 +1,5 @@
-use crate::memory;
 use crate::memory::BootInfoFrameAllocator;
+use crate::{memory, println_all};
 use bootloader::BootInfo;
 use fixed_size_block::FixedSizeBlockAllocator;
 use x86_64::{
@@ -38,6 +38,7 @@ pub fn init_heap(
             .ok_or(MapToError::FrameAllocationFailed)?;
         let flags = PageTableFlags::PRESENT | PageTableFlags::WRITABLE;
         unsafe { mapper.map_to(page, frame, flags, frame_allocator)?.flush() };
+        println_all!("heap: {:?} -> {:?} - flags: {:?}", page, frame, flags);
     }
 
     unsafe {
@@ -48,6 +49,10 @@ pub fn init_heap(
 }
 
 pub fn init_allocation_system(boot_info: &'static BootInfo) {
+    println_all!(
+        "allocator: Using physical memory offset: 0x{:x}",
+        boot_info.physical_memory_offset
+    );
     let phys_mem_offset = VirtAddr::new(boot_info.physical_memory_offset);
     let mut mapper = unsafe { memory::init(phys_mem_offset) };
     let mut frame_allocator = unsafe { BootInfoFrameAllocator::init(&boot_info.memory_map) };

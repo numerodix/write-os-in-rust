@@ -1,15 +1,12 @@
-use alloc::format;
 use bootloader::BootInfo;
 
 use crate::pci::detect::detect_all_devices;
 use crate::pcnet::PcNet;
-use crate::serial_println;
+use crate::println_all;
 use crate::shortcuts::format_mac_address;
-use crate::shortcuts::print_both;
-use crate::shortcuts::println_both;
 
 pub fn init_pci_devices(boot_info: &'static BootInfo) {
-    println_both("pci: Detecting PCI devices...");
+    println_all!("pci: Detecting PCI devices...");
     let devices = detect_all_devices();
 
     // use bar1 as a mem location and read its value
@@ -20,27 +17,27 @@ pub fn init_pci_devices(boot_info: &'static BootInfo) {
 
     for device in devices.iter() {
         let line = device.display_line();
-        let line = format!("pci: {}", line);
-        println_both(&line);
+        println_all!("pci: {}", line);
 
         let lines = device.display_block();
         for line in lines {
-            let line = format!("pci: {}\n", line);
-            print_both(&line);
+            println_all!("pci: {}", line);
         }
     }
 
-    println_both("init pcnet card");
+    // why is this not boot_info.physical_memory_offset -NOR- HEAP_START??
+    let page_mapping_offset: u64 = 0x4444441c0000;
+
+    println_all!("init pcnet card");
     let mut binding = devices[devices.len() - 1];
-    let mut pcnet = PcNet::initialize(binding, boot_info.physical_memory_offset);
+    let mut pcnet = PcNet::initialize(binding, page_mapping_offset);
 
     let mac = pcnet.read_mac_address();
-    println_both(&format!("mac: {}", format_mac_address(mac)));
+    println_all!("mac: {}", format_mac_address(mac));
 
     binding.redetect();
     let lines = binding.display_block();
     for line in lines {
-        let line = format!("pci: {}\n", line);
-        print_both(&line);
+        println_all!("pci: {}", line);
     }
 }
