@@ -64,12 +64,14 @@ impl PcNet {
         // Tell the card to initialize
         csr_no = 0;
         let mut csr0 = io_ports.read_csr32(csr_no);
-        csr0 |= 0x1;
+        csr0 |= 0x1; // set bit 0
         io_ports.write_csr32(csr_no, csr0);
+        println_all!("csr0: {:b}", csr0);
 
         // Poll waiting for card to initialize
         loop {
             csr0 = io_ports.read_csr32(csr_no);
+            // wait for bit 8 to be set
             if csr0 & 0x80 > 0 {
                 break;
             }
@@ -77,8 +79,13 @@ impl PcNet {
 
         // Start the card
         csr0 = io_ports.read_csr32(csr_no);
-        csr0 &= 0b010;
+        println_all!("csr0: {:b}", csr0);
+        csr0 &= 0xfffffffa; // clear bits 0 and 2
+        csr0 |= 0x00000002; // set bit 1
         io_ports.write_csr32(csr_no, csr0);
+
+        csr0 = io_ports.read_csr32(csr_no);
+        println_all!("csr0: {:b}", csr0);
 
         PcNet {
             binding,
@@ -97,11 +104,10 @@ impl PcNet {
         loop {
             for idx in 0..NUM_RECEIVE_BUFFERS {
                 let mut desc = bufman.receive_descriptors.entries[idx];
+                let buffer = bufman.receive_buffers.buffers[idx];
 
                 if desc.driver_has_ownership() {
-                    let buffer = bufman.receive_buffers.buffers[idx];
                     print_all!("packet: {:?}", buffer.buffer);
-
                     desc.set_card_ownership();
                 }
             }
