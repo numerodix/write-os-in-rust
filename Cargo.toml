@@ -37,7 +37,8 @@ features = ["spin_no_std"]
 run-args = [
     "-serial", "stdio",
     "-device", "pcnet,netdev=net0",
-    "-netdev", "user,id=net0,hostfwd=udp::2000-:2000",
+    "-netdev", "user,id=net0,hostfwd=tcp::5556-:22",
+    # "-netdev", "user,id=net0,hostfwd=udp::2000-:2000",
 ]
 test-args = [
     "-device", "isa-debug-exit,iobase=0xf4,iosize=0x04",
