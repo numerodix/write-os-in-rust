@@ -1,23 +1,15 @@
 use crate::println_all;
-use crate::serial_println;
 
 use crate::pci::model::PciDeviceBinding;
+use crate::shortcuts::sleep;
 
 use super::buffers::BufferManager;
-use super::buffers::DescriptorEntry;
 use super::ports::IoPorts;
 
 pub struct PcNet {
     binding: PciDeviceBinding,
     io_ports: IoPorts,
     buffer_manager: BufferManager,
-
-    rde: Option<*mut DescriptorEntry>,
-    tde: Option<*mut DescriptorEntry>,
-
-    rx_buffer_count: u16,
-    tx_buffer_count: u16,
-    buffer_size: u16,
 }
 
 impl PcNet {
@@ -40,7 +32,7 @@ impl PcNet {
         io_ports.read_reset16();
 
         // wait 1us (sort of)
-        Self::sleep(1 << 20);
+        sleep(1 << 20);
 
         // Set 32bit mode
         io_ports.write_rdp32(0);
@@ -58,28 +50,10 @@ impl PcNet {
         bcr2 |= 0x2;
         io_ports.write_bcr32(bcr_no, bcr2);
 
-        println_all!(
-            "rx_bufs[31]: 0x{:x}",
-            buffer_manager.address_of_rx_buffer(31)
-        );
-        println_all!("tx_bufs[7]: 0x{:x}", buffer_manager.address_of_tx_buffer(7));
-
         PcNet {
             binding,
             io_ports,
             buffer_manager,
-            rde: None,
-            tde: None,
-            rx_buffer_count: 0,
-            tx_buffer_count: 0,
-            buffer_size: 0,
-        }
-    }
-
-    fn sleep(cycles: u64) {
-        let mut sum = 0;
-        for i in 0..cycles {
-            sum += i;
         }
     }
 
@@ -96,5 +70,17 @@ impl PcNet {
         mac[5] = ((snd_byte >> 8) & 0xff) as u8;
 
         mac
+    }
+
+    pub fn dump_phys_addresses(&self) {
+        let bufman = &self.buffer_manager;
+
+        println_all!("rx_bufs[31]: 0x{:x}", bufman.address_of_rx_buffer(31));
+        println_all!("tx_bufs[7]: 0x{:x}", bufman.address_of_tx_buffer(7));
+
+        println_all!("rx_desc[0]: 0x{:x}", bufman.address_of_rx_descriptor(0));
+        println_all!("tx_desc[0]: 0x{:x}", bufman.address_of_tx_descriptor(0));
+
+        println_all!("init_struct: 0x{:x}", bufman.address_of_init_struct());
     }
 }

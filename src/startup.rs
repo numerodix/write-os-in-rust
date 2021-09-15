@@ -34,6 +34,7 @@ pub fn init_pci_devices(boot_info: &'static BootInfo) {
 
     let mac = pcnet.read_mac_address();
     println_all!("mac: {}", format_mac_address(mac));
+    pcnet.dump_phys_addresses();
 
     binding.redetect();
     let lines = binding.display_block();

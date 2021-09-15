@@ -22,3 +22,13 @@ pub fn format_mac_address(mac: [u8; 6]) -> String {
         mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]
     )
 }
+
+pub fn sleep(cycles: u64) -> u64 {
+    let mut sum = 0;
+
+    for i in 0..cycles {
+        sum += i;
+    }
+
+    sum
+}
