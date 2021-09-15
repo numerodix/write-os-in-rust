@@ -14,7 +14,7 @@ pub struct PcNet {
 
 impl PcNet {
     pub fn initialize(binding: PciDeviceBinding, physical_memory_offset: u64) -> Self {
-        let buffer_manager = BufferManager::new(physical_memory_offset);
+        let mut buffer_manager = BufferManager::new(physical_memory_offset);
 
         // Enable io ports and bus mastering of the card
         let offset = 4;
@@ -49,6 +49,9 @@ impl PcNet {
         let mut bcr2 = io_ports.read_bcr32(bcr_no);
         bcr2 |= 0x2;
         io_ports.write_bcr32(bcr_no, bcr2);
+
+        // Set up buffers
+        buffer_manager.initialize();
 
         PcNet {
             binding,

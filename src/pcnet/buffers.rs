@@ -193,4 +193,12 @@ impl BufferManager {
 
         self.translator.translate(addr)
     }
+
+    pub fn initialize(&mut self) {
+        for idx in 0..NUM_RECEIVE_BUFFERS {
+            let mut desc = self.receive_descriptors.entries[idx];
+            let addr = self.address_of_rx_buffer(idx);
+            desc.buffer_address = addr;
+        }
+    }
 }
