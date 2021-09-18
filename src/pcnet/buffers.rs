@@ -220,7 +220,7 @@ impl BufferManager {
         self.translator.translate(addr)
     }
 
-    pub fn address_of_init_struct(&self) -> u32 {
+    pub fn address_of_init_block(&self) -> u32 {
         let addr = &*self.init_block as *const InitBlock as u64;
 
         self.translator.translate(addr)

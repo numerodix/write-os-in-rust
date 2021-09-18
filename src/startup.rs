@@ -9,14 +9,14 @@ use crate::shortcuts::format_mac_address;
 pub fn init_pcnet_card(binding: PciDeviceBinding) {
     let page_mapping_offset: u64 = 0x4444441c0000;
 
-    println_all!("pcnet: Initializing pcnet card");
+    println_all!("pcnet32: Initializing pcnet card");
     let mut pcnet = PcNet::initialize(binding, page_mapping_offset);
 
     let mac = pcnet.read_mac_address();
-    println_all!("pcnet: Using mac address: {}", format_mac_address(mac));
+    println_all!("pcnet32: Using mac address: {}", format_mac_address(mac));
     // pcnet.dump_phys_addresses();
 
-    println_all!("pcnet: Polling for incoming packets...");
+    println_all!("pcnet32: Polling for incoming packets...");
     pcnet.poll_recv_packets();
 }
 

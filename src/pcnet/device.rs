@@ -55,9 +55,9 @@ impl PcNet {
         buffer_manager.initialize(mac);
 
         // Point the card to the init struct
-        let is_addr = buffer_manager.address_of_init_struct();
-        let low = is_addr & 0xffff;
-        let high = (is_addr >> 16) & 0xffff;
+        let ib_addr = buffer_manager.address_of_init_block();
+        let low = ib_addr & 0xffff;
+        let high = (ib_addr >> 16) & 0xffff;
         io_ports.write_csr32(1, low);
         io_ports.write_csr32(2, high);
 
@@ -123,6 +123,6 @@ impl PcNet {
         println_all!("rx_desc[0]: 0x{:x}", bufman.address_of_rx_descriptor(0));
         println_all!("tx_desc[0]: 0x{:x}", bufman.address_of_tx_descriptor(0));
 
-        println_all!("init_struct: 0x{:x}", bufman.address_of_init_struct());
+        println_all!("init_struct: 0x{:x}", bufman.address_of_init_block());
     }
 }
