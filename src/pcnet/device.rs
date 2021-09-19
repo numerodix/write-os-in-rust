@@ -35,20 +35,20 @@ impl PcNet {
         sleep(1 << 20);
 
         // Set 32bit mode
-        io_ports.write_rdp32(0);
+        io_ports.write_rdp16(0);
 
         // Set SWSTYLE to 2
         let mut csr_no = 58;
-        let mut csr58 = io_ports.read_csr32(csr_no);
+        let mut csr58 = io_ports.read_csr16(csr_no);
         csr58 &= 0xff00;
         csr58 |= 2;
-        io_ports.write_csr32(csr_no, csr58);
+        io_ports.write_csr16(csr_no, csr58);
 
         // Set ASEL bit
         let bcr_no = 2;
-        let mut bcr2 = io_ports.read_bcr32(bcr_no);
+        let mut bcr2 = io_ports.read_bcr16(bcr_no);
         bcr2 |= 0x2;
-        io_ports.write_bcr32(bcr_no, bcr2);
+        io_ports.write_bcr16(bcr_no, bcr2);
 
         // Set up buffers
         let mac = io_ports.read_mac_address();
@@ -58,19 +58,19 @@ impl PcNet {
         let ib_addr = buffer_manager.address_of_init_block();
         let low = ib_addr & 0xffff;
         let high = (ib_addr >> 16) & 0xffff;
-        io_ports.write_csr32(1, low);
-        io_ports.write_csr32(2, high);
+        io_ports.write_csr16(1, low as u16);
+        io_ports.write_csr16(2, high as u16);
 
         // Tell the card to initialize
         csr_no = 0;
-        let mut csr0 = io_ports.read_csr32(csr_no);
+        let mut csr0 = io_ports.read_csr16(csr_no);
         csr0 |= 0x1; // set bit 0
-        io_ports.write_csr32(csr_no, csr0);
+        io_ports.write_csr16(csr_no, csr0);
         println_all!("csr0: {:b}", csr0);
 
         // Poll waiting for card to initialize
         loop {
-            csr0 = io_ports.read_csr32(csr_no);
+            csr0 = io_ports.read_csr16(csr_no);
             // wait for bit 8 to be set
             if csr0 & 0x80 > 0 {
                 break;
@@ -78,13 +78,13 @@ impl PcNet {
         }
 
         // Start the card
-        csr0 = io_ports.read_csr32(csr_no);
+        csr0 = io_ports.read_csr16(csr_no);
         println_all!("csr0: {:b}", csr0);
-        csr0 &= 0xfffffffa; // clear bits 0 and 2
-        csr0 |= 0x00000002; // set bit 1
-        io_ports.write_csr32(csr_no, csr0);
+        csr0 &= 0xfffa; // clear bits 0 and 2
+        csr0 |= 0x0002; // set bit 1
+        io_ports.write_csr16(csr_no, csr0);
 
-        csr0 = io_ports.read_csr32(csr_no);
+        csr0 = io_ports.read_csr16(csr_no);
         println_all!("csr0: {:b}", csr0);
 
         PcNet {
